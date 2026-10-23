@@ -56,8 +56,7 @@
 <details id="feature-status" class="card note">
   <summary>Trạng thái chức năng</summary>
   <ul>
-    <li>Có giao diện: đăng ký, đăng nhập, đăng xuất, hồ sơ, đăng bài, dòng thời gian có phân trang.</li>
-    <li>Chỉ có hàm NXHN.* (chưa có giao diện): bình luận, follow, chat, upload ảnh, thông báo, cộng đồng, báo cáo, xử lý báo cáo.</li>
+    <li>Có giao diện: đăng ký, đăng nhập, đăng xuất, hồ sơ, đăng bài, dòng thời gian, bình luận, follow, chat 1–1 và nhóm, ảnh đính kèm, thông báo, cộng đồng, báo cáo và xử lý báo cáo (quản trị).</li>
     <li>Chưa triển khai: hết hạn tin nhắn/tệp, tin nhắn ẩn danh, cuộc gọi, tìm kiếm nâng cao, ảnh đại diện.</li>
     <li>Chưa kiểm thử trên Supabase thật.</li>
   </ul>
@@ -176,6 +175,7 @@ function renderPost(p) {
   b.className = 'post-body';
   b.textContent = p.body;
   li.append(a, ' ', t, b);
+  if (window.decoratePost) window.decoratePost(li, p); // bình luận/báo cáo/xóa/ảnh (features.js)
   return li;
 }
 
@@ -221,6 +221,7 @@ sb.auth.onAuthStateChange((_e, s) => setTimeout(() => {
 $('auth-form').onsubmit = (e) => {
   e.preventDefault();
   return lock(['btn-signin', 'btn-signup'], async () => {
+    $('auth-password').autocomplete = 'current-password';
     say('Đang đăng nhập…');
     if (await NXHN.signIn($('auth-email').value.trim(), $('auth-password').value)) say('');
   });
@@ -228,6 +229,7 @@ $('auth-form').onsubmit = (e) => {
 $('btn-signup').onclick = () => {
   if (!$('auth-form').reportValidity()) return;
   return lock(['btn-signin', 'btn-signup'], async () => {
+    $('auth-password').autocomplete = 'new-password';
     say('Đang đăng ký…');
     if (await NXHN.signUp($('auth-email').value.trim(), $('auth-password').value))
       say('Đã đăng ký. Nếu dự án bật xác nhận email, hãy kiểm tra hộp thư rồi đăng nhập.');
@@ -249,5 +251,6 @@ $('post-form').onsubmit = (e) => {
 };
 $('btn-more').onclick = () => loadMore(false);
 </script>
+<script src="features.js"></script>
 </body>
 </html>
