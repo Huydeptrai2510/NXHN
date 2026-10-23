@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>NXHN — Nói Xã Hội Nghe</title>
 <meta name="theme-color" content="#080b10">
 <meta name="color-scheme" content="dark">
@@ -19,19 +19,20 @@
 
 <section id="auth-view" class="card" aria-labelledby="auth-title">
   <h2 id="auth-title">Vào NXHN</h2>
-  <p class="auth-intro">Đăng nhập bằng ID người dùng. Tài khoản mới vẫn cần email để đăng ký.</p>
+  <p class="auth-intro">Đăng nhập bằng @username và mật khẩu.</p>
   <form id="auth-form" class="form" onsubmit="return false">
-    <div class="field"><label for="auth-user-id">ID người dùng</label>
-      <input id="auth-user-id" type="text" placeholder="Dán ID UUID của bạn" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>
-    <div id="signup-email-field" class="field" hidden><label for="auth-email">Email đăng ký</label>
-      <input id="auth-email" type="email" placeholder="ten@email.com" autocomplete="email"></div>
+    <div class="field"><label for="auth-username">Username</label>
+      <input id="auth-username" type="text" placeholder="@username" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>
     <div class="field"><label for="auth-password">Mật khẩu</label>
       <input id="auth-password" type="password" placeholder="Mật khẩu tài khoản" minlength="8" autocomplete="current-password" required></div>
+    <div id="signup-confirm-field" class="field" hidden><label for="auth-password2">Nhập lại mật khẩu</label>
+      <input id="auth-password2" type="password" placeholder="Nhập lại mật khẩu" minlength="8" autocomplete="new-password"></div>
+    <label class="check"><input id="show-pw" type="checkbox"> Hiện mật khẩu</label>
     <div class="actions auth-actions">
       <button id="btn-signin" class="btn btn-primary" type="submit">Đăng nhập</button>
       <button id="btn-signup" class="btn btn-secondary" type="button">Tạo tài khoản</button>
     </div>
-    <p id="auth-hint" class="auth-hint">Chưa có ID? Chọn “Tạo tài khoản” để đăng ký bằng email.</p>
+    <p id="auth-hint" class="auth-hint"></p>
   </form>
 </section>
 
@@ -42,12 +43,10 @@
   </div>
   <form id="profile-form" class="card form" onsubmit="return false">
     <h2>Hồ sơ và cài đặt</h2>
-    <p class="settings-description">ID là mã tài khoản cố định; tên hiển thị có thể đổi bất cứ lúc nào.</p>
-    <div class="field"><label for="profile-user-id">ID người dùng</label>
-      <div class="copy-row"><input id="profile-user-id" type="text" readonly aria-describedby="profile-id-help"><button id="btn-copy-id" class="btn btn-secondary btn-small" type="button">Sao chép</button></div>
-      <small id="profile-id-help" class="field-help">Dùng ID này để đăng nhập. Không chia sẻ mật khẩu.</small></div>
-    <div class="field"><label for="profile-display-name">Tên hiển thị</label>
-      <input id="profile-display-name" maxlength="50" placeholder="Tên mọi người nhìn thấy" required></div>
+    <p class="settings-description">Username là tên công khai của bạn, hiển thị dạng @username.</p>
+    <div class="field"><label for="profile-username">Username</label>
+      <input id="profile-username" maxlength="21" autocapitalize="none" spellcheck="false" autocomplete="off" placeholder="vd: huynguyen" required>
+      <small class="field-help">3–20 ký tự: chữ thường a–z, số, dấu gạch dưới.</small></div>
     <div class="field"><label for="profile-bio">Giới thiệu</label>
       <textarea id="profile-bio" maxlength="300" rows="3" placeholder="Một chút về bạn…"></textarea></div>
     <div class="actions"><button id="btn-save-profile" class="btn btn-primary" type="submit">Lưu thay đổi</button></div>
@@ -84,10 +83,11 @@ const friendly = (e) => {
   const c = (e && (e.code || e.status)) + '', m = (e && e.message) || '';
   if (c === '54000') return 'Bạn thao tác quá nhanh, hãy thử lại sau ít phút.';
   if (c === '42501') return 'Bạn không có quyền thực hiện thao tác này.';
-  if (c === '23505') return 'Dữ liệu này đã tồn tại.';
+  if (e && e.userMessage) return e.userMessage;
+  if (c === '23505') return 'Username hoặc dữ liệu này đã tồn tại.';
   if (c === '23514' || c === '22023') return 'Dữ liệu không hợp lệ, hãy kiểm tra lại.';
-  if (/invalid login|invalid user|user id or password|id người dùng hoặc mật khẩu/i.test(m)) return 'ID người dùng hoặc mật khẩu không đúng.';
-  if (/already registered|already exists/i.test(m)) return 'Email này đã được đăng ký.';
+  if (/invalid login|invalid user|username hoặc mật khẩu/i.test(m)) return 'Username hoặc mật khẩu không đúng.';
+  if (/already registered|already exists/i.test(m)) return 'Username này đã được sử dụng.';
   if (/jwt|expired|not authenticated/i.test(m)) return 'Phiên đăng nhập đã hết hạn, hãy đăng nhập lại.';
   if (/fetch|network|load failed/i.test(m)) return 'Không kết nối được mạng hoặc dịch vụ, hãy kiểm tra kết nối rồi thử lại.';
   return 'Không thực hiện được, hãy thử lại.';
@@ -100,26 +100,26 @@ const lock = async (ids, fn) => {
 };
 const ok = ({ data, error }) => (error ? fail(error) : (data ?? true));
 
+// Đăng nhập/đăng ký bằng username qua Edge Function (email nội bộ không bao giờ về trình duyệt).
+const AUTH_FN = `${SUPABASE_URL}/functions/v1/username-auth`;
+const USER_RE = /^[a-z0-9_]{3,20}$/;
+const normUser = (s) => String(s || '').trim().replace(/^@+/, '').toLowerCase();
+const handle = (u) => (u ? '@' + u : 'Hồ sơ chưa hoàn tất');
+const authCall = async (action, username, password) => {
+  try {
+    const r = await fetch(AUTH_FN, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: SUPABASE_ANON_KEY }, body: JSON.stringify({ action, username, password }) });
+    const res = await r.json().catch(() => ({}));
+    if (!r.ok || !res.access_token || !res.refresh_token) return fail({ userMessage: res.error || 'Username hoặc mật khẩu không đúng.' });
+    const { data, error } = await sb.auth.setSession({ access_token: res.access_token, refresh_token: res.refresh_token });
+    return error ? fail(error) : data;
+  } catch (e) { return fail(e); }
+};
 // Lớp logic: giao diện (Giai đoạn 2) chỉ gọi các hàm này. Quyền thật nằm ở RLS/hàm SQL, không nằm ở đây.
 const NXHN = {
-  signUp: (email, password) => sb.auth.signUp({ email, password }).then(ok),
-  signInByUserId: async (user_id, password) => {
-    try {
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/login-by-user-id`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
-        body: JSON.stringify({ user_id, password })
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok || !result.access_token || !result.refresh_token) {
-        return fail({ message: result.error || 'ID người dùng hoặc mật khẩu không đúng.' });
-      }
-      const { data, error } = await sb.auth.setSession({ access_token: result.access_token, refresh_token: result.refresh_token });
-      return error ? fail(error) : data;
-    } catch (error) { return fail(error); }
-  },
+  signUp: (username, password) => authCall('signup', username, password),
+  signIn: (username, password) => authCall('login', username, password),
   signOut: () => sb.auth.signOut(),
-  getProfile: (id) => sb.from('profiles').select('id,username,display_name,bio').eq('id', id).single().then(ok),
+  getProfile: (id) => sb.from('profiles').select('id,username,bio').eq('id', id).single().then(ok),
   updateProfile: (id, f) => sb.from('profiles').update(f).eq('id', id).select().single().then(ok),
   createPost: (author_id, body, community_id = null) =>
     sb.from('posts').insert({ author_id, body, community_id }).select().single().then(ok),
@@ -127,7 +127,7 @@ const NXHN = {
     const posts = ok(await sb.rpc('timeline', before ? { p_before: before, p_limit: PAGE } : { p_limit: PAGE }));
     if (!Array.isArray(posts) || !posts.length) return posts;
     const ids = [...new Set(posts.map((p) => p.author_id))];
-    const ps = ok(await sb.from('profiles').select('id,username,display_name').in('id', ids)) || [];
+    const ps = ok(await sb.from('profiles').select('id,username').in('id', ids)) || [];
     const m = Object.fromEntries((Array.isArray(ps) ? ps : []).map((p) => [p.id, p]));
     return posts.map((p) => ({ ...p, author: m[p.author_id] }));
   },
@@ -183,7 +183,7 @@ function renderPost(p) {
   li.dataset.postId = p.id;
   const a = document.createElement('b');
   a.className = 'post-author';
-  a.textContent = p.author ? p.author.display_name : 'Người dùng';
+  a.textContent = handle(p.author && p.author.username);
   const t = document.createElement('time');
   t.className = 'post-time';
   t.dateTime = p.created_at;
@@ -219,12 +219,11 @@ async function render(session) {
     $('me-name').textContent = ''; $('timeline-empty').hidden = true; $('btn-more').hidden = true; cursor = null;
     return;
   }
-  $('profile-user-id').value = user.id;
+  $('auth-password').value = ''; $('auth-password2').value = '';
   const p = await NXHN.getProfile(user.id);
   if (p && p !== true) {
-    $('me-name').textContent = p.display_name || p.username || 'Người dùng';
-    $('profile-user-id').value = user.id;
-    $('profile-display-name').value = p.display_name || '';
+    $('me-name').textContent = handle(p.username);
+    $('profile-username').value = p.username || '';
     $('profile-bio').value = p.bio || '';
   }
   loadMore(true);
@@ -237,65 +236,51 @@ sb.auth.onAuthStateChange((_e, s) => setTimeout(() => {
   if (id !== uid) { uid = id; render(s); }
 }, 0));
 
+const HINT_IN = 'Chưa có tài khoản? Chọn “Tạo tài khoản”. Nhập username có hoặc không có @ đều được.';
+const HINT_UP = 'Username 3–20 ký tự: chữ thường a–z, số, gạch dưới. Hãy nhớ mật khẩu vì tài khoản không dùng email để khôi phục.';
+const UERR = 'Username gồm 3–20 ký tự: chữ thường a–z, số, dấu gạch dưới.';
+let signupMode = false;
+const setMode = (on) => {
+  signupMode = on;
+  $('signup-confirm-field').hidden = !on; $('auth-password2').required = on; $('auth-password2').value = '';
+  $('auth-password').autocomplete = on ? 'new-password' : 'current-password';
+  $('btn-signup').textContent = on ? 'Xác nhận đăng ký' : 'Tạo tài khoản';
+  $('btn-signin').textContent = on ? 'Quay lại đăng nhập' : 'Đăng nhập';
+  $('auth-hint').textContent = on ? HINT_UP : HINT_IN;
+  say('');
+};
+setMode(false);
 $('auth-form').onsubmit = (e) => {
   e.preventDefault();
+  if (signupMode) return $('btn-signup').click();
+  const u = normUser($('auth-username').value), pw = $('auth-password').value;
+  if (!u || !pw) return say('Hãy nhập username và mật khẩu.');
   return lock(['btn-signin', 'btn-signup'], async () => {
-    $('auth-password').autocomplete = 'current-password';
     say('Đang đăng nhập…');
-    if (await NXHN.signInByUserId($('auth-user-id').value.trim(), $('auth-password').value)) say('');
+    if (await NXHN.signIn(u, pw)) say('');
   });
 };
-let signupMode = false;
 $('btn-signup').onclick = () => {
-  if (!signupMode) {
-    signupMode = true;
-    $('auth-user-id').required = false;
-    $('signup-email-field').hidden = false;
-    $('auth-email').required = true;
-    $('auth-password').autocomplete = 'new-password';
-    $('btn-signup').textContent = 'Xác nhận đăng ký';
-    $('btn-signin').textContent = 'Quay lại đăng nhập';
-    $('auth-hint').textContent = 'Sau khi đăng ký, hãy lưu ID người dùng để dùng cho các lần đăng nhập sau.';
-    $('auth-email').focus();
-    return;
-  }
-  if (!$('auth-form').reportValidity()) return;
+  if (!signupMode) { setMode(true); $('auth-username').focus(); return; }
+  const u = normUser($('auth-username').value), pw = $('auth-password').value;
+  if (!USER_RE.test(u)) return say(UERR);
+  if (pw.length < 8) return say('Mật khẩu tối thiểu 8 ký tự.');
+  if (pw !== $('auth-password2').value) return say('Hai mật khẩu chưa khớp.');
   return lock(['btn-signin', 'btn-signup'], async () => {
     say('Đang tạo tài khoản…');
-    const result = await NXHN.signUp($('auth-email').value.trim(), $('auth-password').value);
-    if (result && result !== true) {
-      const id = result.user?.id;
-      if (id) $('auth-user-id').value = id;
-      say(id ? `Đã tạo tài khoản. ID người dùng của bạn: ${id}. Hãy sao chép và lưu lại. Nếu cần xác nhận email, hãy kiểm tra hộp thư.` : 'Đã gửi yêu cầu đăng ký. Nếu dự án bật xác nhận email, hãy kiểm tra hộp thư.');
-    }
+    if (await NXHN.signUp(u, pw)) say('');
   });
 };
-$('btn-signin').addEventListener('click', (e) => {
-  if (!signupMode) return;
-  e.preventDefault();
-  signupMode = false;
-  $('auth-user-id').required = true;
-  $('signup-email-field').hidden = true;
-  $('auth-email').required = false;
-  $('auth-email').value = '';
-  $('auth-password').autocomplete = 'current-password';
-  $('btn-signup').textContent = 'Tạo tài khoản';
-  $('btn-signin').textContent = 'Đăng nhập';
-  $('auth-hint').textContent = 'Chưa có ID? Chọn “Tạo tài khoản” để đăng ký bằng email.';
-  say('');
-});
-$('btn-copy-id').onclick = async () => {
-  const value = $('profile-user-id').value;
-  if (!value) return;
-  try { await navigator.clipboard.writeText(value); say('Đã sao chép ID người dùng.'); }
-  catch { $('profile-user-id').select(); say('Hãy sao chép ID đang được chọn.'); }
-};
+$('btn-signin').addEventListener('click', (e) => { if (signupMode) { e.preventDefault(); setMode(false); } });
+$('show-pw').onchange = (e) => { ['auth-password', 'auth-password2'].forEach((id) => { $(id).type = e.target.checked ? 'text' : 'password'; }); };
 $('btn-signout').onclick = () => NXHN.signOut();
 $('profile-form').onsubmit = (e) => {
   e.preventDefault();
+  const u = normUser($('profile-username').value);
+  if (!USER_RE.test(u)) return say(UERR);
   return lock(['btn-save-profile'], async () => {
-    const p = await NXHN.updateProfile(user.id, { display_name: $('profile-display-name').value.trim(), bio: $('profile-bio').value });
-    if (p && p !== true) { $('me-name').textContent = p.display_name; say('Đã lưu hồ sơ.'); }
+    const p = await NXHN.updateProfile(user.id, { username: u, bio: $('profile-bio').value });
+    if (p && p !== true) { $('me-name').textContent = handle(p.username); $('profile-username').value = p.username; say('Đã lưu hồ sơ.'); }
   });
 };
 $('post-form').onsubmit = (e) => {
