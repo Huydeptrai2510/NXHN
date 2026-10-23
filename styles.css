@@ -255,7 +255,8 @@ input[type="checkbox"] { width: 1.2rem; height: 1.2rem; min-height: 0; flex: 0 0
 .post > .btn, .msg > .btn { margin-top: .65rem; }
 .media { display: flex; flex-wrap: wrap; gap: .55rem; margin-top: .6rem; }
 .media:empty { display: none; }
-.media img { width: auto; max-width: 100%; max-height: min(34vh, 18rem); object-fit: contain; border: 1px solid var(--line); border-radius: .7rem; background: #05080c; }
+.media img { width: auto; max-width: min(100%, 14rem); max-height: 9rem; object-fit: contain; border: 1px solid var(--line); border-radius: .7rem; background: #05080c; cursor: zoom-in; }
+.msg .media img { max-width: min(100%, 8rem); max-height: 8rem; }
 .empty { padding: 1.5rem .8rem; border: 1px dashed #34485b; border-radius: var(--radius); color: var(--muted); text-align: center; }
 #btn-more { display: flex; margin: 1rem auto .3rem; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
@@ -264,10 +265,12 @@ input[type="checkbox"] { width: 1.2rem; height: 1.2rem; min-height: 0; flex: 0 0
 .checks { max-height: 12rem; overflow-y: auto; overscroll-behavior: contain; }
 
 /* Chat: lịch sử tin nhắn có vùng cuộn riêng; khi mở chat không kéo cả website. */
-.chat { min-height: 0; }
+#view-chat { display: flex; flex-direction: column; overflow: hidden; }
+.chat { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.chat-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .chat-list, .chat-pane { min-width: 0; }
 .chat-pane { display: none; }
-.chat[data-open] .chat-pane { display: flex; flex-direction: column; min-height: 0; gap: .55rem; }
+.chat[data-open] .chat-pane { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; gap: .55rem; }
 .chat[data-open] .chat-list { display: none; }
 .back-btn { align-self: flex-start; margin-bottom: .2rem; }
 .messages {
@@ -275,9 +278,8 @@ input[type="checkbox"] { width: 1.2rem; height: 1.2rem; min-height: 0; flex: 0 0
   display: flex;
   flex-direction: column;
   gap: .55rem;
-  height: min(48vh, 30rem);
-  min-height: 10rem;
-  max-height: none;
+  flex: 1 1 auto;
+  min-height: 6rem;
   margin: 0;
   padding: .6rem;
   overflow-x: hidden;
@@ -308,7 +310,6 @@ input[type="checkbox"] { width: 1.2rem; height: 1.2rem; min-height: 0; flex: 0 0
   .view { order: 3; padding: .2rem .1rem 1rem; }
   .post { padding: 1.1rem; }
   .chat[data-open] .chat-pane { max-width: 56rem; margin-inline: auto; width: 100%; }
-  .messages { height: min(54vh, 35rem); }
 }
 @media (max-width: 22rem) {
   .header-status { display: none; }
@@ -321,3 +322,11 @@ input[type="checkbox"] { width: 1.2rem; height: 1.2rem; min-height: 0; flex: 0 0
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* Xem ảnh gốc */
+.lightbox { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; gap: .5rem; padding: max(.5rem, env(safe-area-inset-top)) max(.5rem, env(safe-area-inset-right)) max(.5rem, env(safe-area-inset-bottom)) max(.5rem, env(safe-area-inset-left)); background: rgb(0 0 0 / 92%); }
+.lb-close { align-self: flex-end; }
+.lb-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; display: grid; place-items: center; overscroll-behavior: contain; }
+.lb-scroll img { max-width: 100%; max-height: calc(100dvh - 5.5rem); object-fit: contain; cursor: zoom-in; }
+.lightbox.actual .lb-scroll { place-items: start; }
+.lightbox.actual .lb-scroll img { max-width: none; max-height: none; cursor: zoom-out; }
