@@ -16,14 +16,14 @@ const names = new Map();
 const nm = async (ids) => {
   const need = [...new Set(ids)].filter((i) => i && !names.has(i));
   if (!need.length) return;
-  const r = await sb.from('profiles').select('id,display_name').in('id', need);
-  (r.data || []).forEach((p) => names.set(p.id, p.display_name));
+  const r = await sb.from('profiles').select('id,username').in('id', need);
+  (r.data || []).forEach((p) => names.set(p.id, p.username));
 };
-const N = (id) => names.get(id) || 'Người dùng';
+const N = (id) => handle(names.get(id));
 let cid = null, oldest = null, ch = null, timer = 0, me = null, fol = new Set(), mine = new Map();
 
 Object.assign(NXHN, {
-  people: (from) => sb.from('profiles').select('id,display_name,bio').neq('id', user.id).order('created_at', { ascending: false }).range(from, from + PAGE - 1).then(ok),
+  people: (from) => sb.from('profiles').select('id,username,bio').neq('id', user.id).order('created_at', { ascending: false }).range(from, from + PAGE - 1).then(ok),
   following: () => sb.from('follows').select('followee_id').eq('follower_id', user.id).limit(1000).then(ok),
   remove: (table, id) => sb.from(table).delete().eq('id', id).then(ok), // RLS chỉ cho xóa của mình
   conversations: () => sb.from('conversations').select('id,is_group,title').order('created_at', { ascending: false }).limit(PAGE).then(ok),
@@ -65,6 +65,18 @@ const rep = (type, id) => btn('Báo cáo', async (b) => {
 });
 
 // Ảnh đính kèm: gom nhiều bài/tin nhắn vào một lượt truy vấn + một lượt ký URL (URL hết hạn sau 5 phút).
+let pin = true; // true = đang bám đáy khung chat (tin mới nhất)
+const toEnd = () => { mlist.scrollTop = mlist.scrollHeight; };
+// Xem ảnh gốc: chạm ảnh nhỏ → khung toàn màn hình (vừa màn hình); chạm ảnh lần nữa để xem kích thước gốc.
+const zoom = (src) => {
+  const full = h('img', { src, alt: 'Ảnh đính kèm' });
+  const key = (e) => { if (e.key === 'Escape') close(); };
+  const close = () => { box.remove(); removeEventListener('keydown', key); };
+  const box = h('div', { className: 'lightbox', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Xem ảnh', onclick: (e) => { if (e.target === box) close(); } },
+    h('button', { className: 'btn btn-secondary btn-small lb-close', type: 'button', textContent: 'Đóng', onclick: close }), h('div', { className: 'lb-scroll' }, full));
+  full.onclick = () => box.classList.toggle('actual');
+  addEventListener('keydown', key); document.body.append(box); box.querySelector('button').focus();
+};
 let q = [], qt = 0;
 const queueImg = (node, key, id) => { q.push([node, key, id]); clearTimeout(qt); qt = setTimeout(flushImg, 0); };
 const flushImg = async () => {
@@ -80,7 +92,12 @@ const flushImg = async () => {
     rows.forEach((a) => {
       const n = its.find((i) => i[2] === a[key]), u = url[a.storage_path];
       if (!n || !u) return;
-      const im = h('img', { src: u, alt: 'Ảnh đính kèm', loading: 'lazy' });
+      const inChat = !!n[0].closest('.messages');
+      const im = h('img', { src: u, alt: 'Ảnh đính kèm (chạm để xem ảnh gốc)', title: 'Chạm để xem ảnh gốc', loading: inChat ? 'eager' : 'lazy', tabIndex: 0 });
+      const open = async () => zoom((await NXHN.signedUrl(a.storage_path)) || u);
+      im.onload = () => { if (inChat && pin) toEnd(); };
+      im.onclick = open;
+      im.onkeydown = (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); open(); } };
       im.onerror = () => im.replaceWith(h('em', { textContent: 'Không tải được ảnh.' }));
       n[0].append(im);
     });
@@ -156,23 +173,23 @@ const pv = addView('people', 'Mọi người', async () => {
 });
 const pf = feed((c) => NXHN.people(c || 0), async (ul, rows) => {
   rows.forEach((r) => {
-    names.set(r.id, r.display_name);
+    names.set(r.id, r.username);
     const fb = btn(fol.has(r.id) ? 'Bỏ follow' : 'Follow', (b) => busy(b, async () => {
       if (await (fol.has(r.id) ? NXHN.unfollow(user.id, r.id) : NXHN.follow(user.id, r.id))) {
         fol.has(r.id) ? fol.delete(r.id) : fol.add(r.id);
         b.textContent = fol.has(r.id) ? 'Bỏ follow' : 'Follow';
       }
     }));
-    ul.append(h('li', { className: 'post' }, h('b', { textContent: r.display_name }), h('p', { className: 'post-body', textContent: r.bio }),
+    ul.append(h('li', { className: 'post' }, h('b', { textContent: handle(r.username) }), h('p', { className: 'post-body', textContent: r.bio }),
       h('div', { className: 'actions' }, fb,
-        btn('Nhắn tin', async (b) => { const id = await busy(b, () => NXHN.createConversation([r.id])); if (id) { go('chat', true); openConv(id, r.display_name); } }),
+        btn('Nhắn tin', async (b) => { const id = await busy(b, () => NXHN.createConversation([r.id])); if (id) { go('chat', true); openConv(id, handle(r.username)); } }),
         rep('profile', r.id))));
   });
 }, (c, rows) => (c || 0) + rows.length, 'Chưa có người dùng khác.');
 pv.append(pf.el);
 
 // ---- Chat ----
-const cv = addView('chat', 'Chat', () => convList());
+const cv = addView('chat', 'Chat', () => { convList(); if (cid) { pin = true; requestAnimationFrame(toEnd); } });
 const clist = h('ul', { className: 'timeline' }), mlist = h('ul', { className: 'messages' });
 const olderBtn = btn('Tin cũ hơn', (b) => busy(b, () => loadMsgs(true)));
 olderBtn.hidden = true;
@@ -186,7 +203,7 @@ const mform = h('form', { className: 'chat-form', onsubmit: (e) => {
     const m = await NXHN.sendMessage(cid, user.id, mtext.value.trim());
     if (!m) return;
     if (mfile.files[0]) await NXHN.uploadImage(user.id, mfile.files[0], { message_id: m.id });
-    mtext.value = ''; mfile.value = ''; say(''); loadMsgs(false);
+    pin = true; mtext.value = ''; mfile.value = ''; say(''); loadMsgs(false);
   });
 } }, mtext, mfile, msend);
 const back = btn('← Danh sách chat', () => { cid = null; oldest = null; chatBox.removeAttribute('data-open'); convList(); });
@@ -206,11 +223,12 @@ const newGroup = () => {
   return h('details', { className: 'card', ontoggle: async (e) => {
     if (!e.target.open || box.children.length) return;
     const r = await NXHN.people(0);
-    (Array.isArray(r) ? r : []).forEach((p) => box.append(h('label', { className: 'check' }, h('input', { type: 'checkbox', value: p.id }), ' ' + p.display_name)));
+    (Array.isArray(r) ? r : []).forEach((p) => box.append(h('label', { className: 'check' }, h('input', { type: 'checkbox', value: p.id }), ' ' + handle(p.username))));
   } }, h('summary', { textContent: 'Tạo nhóm chat' }), f);
 };
 const chatBox = h('div', { className: 'chat' }, h('div', { className: 'chat-list' }, newGroup(), clist), h('div', { className: 'chat-pane' }, back, ctitle, olderBtn, mlist, mform));
 cv.append(chatBox);
+mlist.addEventListener('scroll', () => { pin = mlist.scrollHeight - mlist.scrollTop - mlist.clientHeight < 80; }, { passive: true });
 const convList = async () => {
   const cs = await NXHN.conversations();
   if (!Array.isArray(cs)) return;
@@ -223,7 +241,7 @@ const convList = async () => {
   if (!cs.length) clist.append(h('li', { className: 'empty', textContent: 'Chưa có cuộc trò chuyện. Vào tab Mọi người và bấm Nhắn tin.' }));
 };
 const openConv = (id, title) => {
-  cid = id;
+  cid = id; pin = true;
   oldest = null; // Không dùng mốc phân trang của cuộc trò chuyện trước.
   ctitle.textContent = title;
   chatBox.dataset.open = '1';
@@ -250,12 +268,9 @@ const loadMsgs = async (older) => {
     mlist.prepend(...nodes);
     mlist.scrollTop = mlist.scrollHeight - oldHeight;
   } else {
+    const stick = pin;
     mlist.replaceChildren(...nodes);
-    // Đưa cuộc trò chuyện về tin mới nhất; ảnh tải xong cũng giữ đáy khung.
-    requestAnimationFrame(() => { mlist.scrollTop = mlist.scrollHeight; });
-    mlist.querySelectorAll('img').forEach((img) => img.addEventListener('load', () => {
-      if (Math.abs(mlist.scrollHeight - mlist.scrollTop - mlist.clientHeight) < 180) mlist.scrollTop = mlist.scrollHeight;
-    }, { once: true }));
+    if (stick) { toEnd(); requestAnimationFrame(toEnd); } // vào chat → tin mới nhất; ảnh tải xong (onload) giữ đáy
   }
   if (rows.length) oldest = rows[0].created_at;
   olderBtn.hidden = rows.length < PAGE;
@@ -301,7 +316,7 @@ const openGroup = (c) => {
   gl.hidden = true; gform.hidden = true; cbox.hidden = false; cbox.replaceChildren();
   const f = feed((cur) => NXHN.communityPosts(c.id, cur), async (ul, rows) => {
     await nm(rows.map((r) => r.author_id));
-    rows.forEach((r) => ul.append(renderPost({ ...r, author: { display_name: N(r.author_id) } })));
+    rows.forEach((r) => ul.append(renderPost({ ...r, author: { username: names.get(r.author_id) } })));
   }, (cur, rows) => rows[rows.length - 1].created_at, 'Chưa có bài trong cộng đồng.');
   const ta = h('textarea', { rows: 3, maxLength: 5000, required: true, placeholder: 'Viết trong cộng đồng…', 'aria-label': 'Bài viết trong cộng đồng' });
   const s = h('button', { className: 'btn btn-primary', type: 'submit', textContent: 'Đăng vào cộng đồng' });
@@ -313,7 +328,7 @@ const openGroup = (c) => {
     mine.has(c.id) ? form : h('p', { className: 'empty', textContent: 'Tham gia cộng đồng để đăng bài.' }), f.el);
   if (mine.get(c.id) === 'owner') NXHN.people(0).then((ps) => {
     if (!Array.isArray(ps)) return;
-    const sel = h('select', { 'aria-label': 'Chọn người để thêm' }, ps.map((p) => h('option', { value: p.id, textContent: p.display_name })));
+    const sel = h('select', { 'aria-label': 'Chọn người để thêm' }, ps.map((p) => h('option', { value: p.id, textContent: handle(p.username) })));
     cbox.append(h('div', { className: 'actions' }, sel, btn('Thêm thành viên', (b) => busy(b, async () => { if (await NXHN.joinCommunity(c.id, sel.value)) say('Đã thêm thành viên.'); }))));
   });
   f.load(true);
@@ -324,9 +339,9 @@ const av = addView('admin', 'Quản trị', () => af.load(true));
 const af = feed((c) => NXHN.openReports(c || 0), async (ul, rows) => {
   for (const r of rows) {
     const t = { post: 'posts', comment: 'comments', message: 'messages' }[r.target_type];
-    const res = t ? await sb.from(t).select('body').eq('id', r.target_id).maybeSingle() : await sb.from('profiles').select('display_name').eq('id', r.target_id).maybeSingle();
+    const res = t ? await sb.from(t).select('body').eq('id', r.target_id).maybeSingle() : await sb.from('profiles').select('username').eq('id', r.target_id).maybeSingle();
     const c = res.data, li = h('li', { className: 'post' }, h('b', { textContent: `Báo cáo: ${r.target_type}` }),
-      h('p', { className: 'post-body', textContent: 'Lý do: ' + r.reason }), h('p', { className: 'post-body', textContent: 'Nội dung: ' + (c ? (c.body || c.display_name) : '(không còn)') }));
+      h('p', { className: 'post-body', textContent: 'Lý do: ' + r.reason }), h('p', { className: 'post-body', textContent: 'Nội dung: ' + (c ? (c.body || handle(c.username)) : '(không còn)') }));
     const act = (a) => async (b) => {
       const note = prompt('Ghi chú (tùy chọn):');
       if (note === null || (a === 'remove_content' && !confirm('Xóa nội dung này?'))) return;
