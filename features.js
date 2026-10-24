@@ -366,7 +366,12 @@ const upFile = async (file, prefix) => {
   if (file.size > MAXIMG) return fail({ userMessage: 'Ảnh tối đa 5 MB.' });
   const path = `${user.id}/${prefix}-${crypto.randomUUID()}.${ext}`;
   const up = await sb.storage.from('media').upload(path, file, { contentType: file.type, upsert: false });
-  return up.error ? fail(up.error) : path;
+  if (up.error) {
+    const m = (up.error.message || '') + ' ' + (up.error.statusCode || up.error.status || '');
+    return fail(/row-level|violates|not allowed|unauthorized|403/i.test(m) ? { userMessage: 'Kho ảnh từ chối tải lên (thiếu quyền storage cho thư mục của bạn).' }
+      : /bucket not found|404/i.test(m) ? { userMessage: 'Chưa có kho ảnh “media” trên Supabase.' } : up.error);
+  }
+  return path;
 };
 const noSql = (e, what) => (e && /PGRST20[45]|42703|42P01|PGRST205/.test((e.code || '') + ' ' + (e.message || '')) ? { userMessage: `Chưa áp dụng SQL nâng cấp (${what}).` } : e);
 // Chọn ảnh → xem trước → Hủy/Lưu (có loading + lỗi). onSave(file) trả true nếu thành công.
@@ -398,8 +403,10 @@ const imageBox = ({ title, label = 'Lưu', shape = '', extra = null, onSave }) =
 };
 const avatarBox = () => imageBox({ title: 'Đổi ảnh đại diện', shape: 'round', onSave: async (f) => {
   const path = await upFile(f, 'avatar'); if (!path) return false;
-  const r = await sb.from('profiles').update({ avatar_path: path }).eq('id', user.id).select('id').single();
-  if (r.error) { sb.storage.from('media').remove([path]); fail(noSql(r.error, 'cột avatar_path')); return false; }
+  let r = await sb.rpc('set_my_avatar', { p_path: path });
+  if (r.error && /PGRST202|42883|find the function/i.test((r.error.code || '') + ' ' + (r.error.message || ''))) // chưa chạy SQL mới → thử cập nhật trực tiếp
+    r = await sb.from('profiles').update({ avatar_path: path }).eq('id', user.id).select('id').single();
+  if (r.error) { sb.storage.from('media').remove([path]); fail(r.error.code === 'P0001' ? { userMessage: r.error.message } : noSql(r.error, 'cột avatar_path và hàm set_my_avatar')); return false; }
   const old = avPath.get(user.id); avPath.set(user.id, path); await signAv([path]); paint();
   if (old && old !== path) sb.storage.from('media').remove([old]);
   say('Đã cập nhật ảnh đại diện.'); return true;
