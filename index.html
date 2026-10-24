@@ -77,7 +77,7 @@ let sayT = 0; // toast: tự ẩn sau 4 giây (trừ thông báo đang xử lý 
 const say = (m) => {
   const s = $('status'); s.textContent = m || ''; s.classList.toggle('err', /^Lỗi/.test(m || ''));
   clearTimeout(sayT);
-  if (m && !/…$/.test(m)) sayT = setTimeout(() => { s.textContent = ''; }, 4000);
+  if (m && !/…$/.test(m)) sayT = setTimeout(() => { s.textContent = ''; }, /^Lỗi/.test(m) ? 9000 : 4000); // lỗi hiện lâu hơn để kịp đọc
 };
 if (SUPABASE_URL.includes('YOUR-PROJECT')) {
   say('Chưa cấu hình SUPABASE_URL và SUPABASE_ANON_KEY trong index.html.');
