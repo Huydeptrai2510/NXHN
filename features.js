@@ -90,7 +90,7 @@ const followBtn = (id) => {
   }), fol.has(id) ? 'btn-secondary' : 'btn-primary');
   b.dataset.rel = id; return b;
 };
-const rpc = (n, a) => sb.rpc(n, a).then(({ data, error }) => (error ? fail(error.code === 'P0001' ? { userMessage: error.message } : error) : (data ?? true)));
+const rpc = (n, a) => sb.rpc(n, a).then(({ data, error }) => (error ? fail(error.code === 'P0001' ? { userMessage: error.message } : /PGRST202|42883/.test(error.code || '') ? { userMessage: `Chưa áp dụng SQL nâng cấp (hàm ${n}).` } : error) : (data ?? true)));
 const deb = (fn) => { let t = 0; return () => { clearTimeout(t); t = setTimeout(fn, 300); }; };
 let cid = null, oldest = null, ch = null, ch2 = null, ch3 = null, timer = 0, me = null, fol = new Set(), frd = new Set(), isAdm = false, isGroup = false, peer = null, sending = false, replyTo = null, reqId = crypto.randomUUID();
 
@@ -224,9 +224,10 @@ window.decoratePost = (li, p) => { // được renderPost() trong index.html g�
     const own = p.author_id === user.id;
     const more = ibtn('more', 'Tùy chọn bài viết', (b) => {
       const r = b.getBoundingClientRect();
-      menu(r.right - 190, r.bottom + 4, [own
+      menu(r.right - 200, r.bottom + 4, [own
         ? ['Xóa bài viết', async () => { if (await confirmBox('Xóa bài viết này? Không thể hoàn tác.', 'Xóa', true) && await NXHN.remove('posts', p.id)) li.remove(); }, 'danger']
-        : ['Báo cáo bài viết', () => reportBox('post', p.id)]]);
+        : ['Báo cáo bài viết', () => reportBox('post', p.id)],
+        !own && isAdm ? ['Xóa bài viết (quản trị)', async () => { if (await confirmBox(`Xóa bài viết của ${N(p.author_id)}? Không thể hoàn tác.`, 'Xóa', true, 'Xóa bài viết') && await NXHN.admDelPost(p.id)) { li.remove(); say('Đã xóa bài viết.'); } }, 'danger'] : null]);
     });
     li.prepend(h('div', { className: 'post-head' }, avt(p.author_id), h('div', { className: 'post-who' }, au, tm), more));
     nm([p.author_id]);
@@ -345,18 +346,33 @@ const askBox = ({ title = 'Xác nhận', msg = '', label = 'Xác nhận', danger
 });
 const confirmBox = (msg, label, danger, title) => askBox({ msg, label, danger, title }).then(Boolean);
 const REASONS = ['Spam hoặc quảng cáo', 'Quấy rối hoặc xúc phạm', 'Nội dung nhạy cảm hoặc bạo lực', 'Giả mạo hoặc lừa đảo', 'Khác'];
+// Gửi báo cáo; trả về chuỗi lỗi (rỗng nếu thành công) để hiện ngay trong hộp thoại.
+const sendReport = async (type, id, reason) => {
+  const r = await sb.from('reports').insert({ reporter_id: user.id, target_type: type, target_id: id, reason });
+  if (!r.error) return '';
+  console.error(r.error);
+  const c = String(r.error.code || r.error.status || '');
+  return c === '23505' ? 'Bạn đã báo cáo nội dung này rồi.'
+    : c === '42501' ? 'Máy chủ từ chối: bạn không có quyền gửi báo cáo này (chính sách RLS của bảng reports).'
+    : c === '23503' ? 'Nội dung này không còn tồn tại.'
+    : c === '54000' ? 'Bạn thao tác quá nhanh, hãy thử lại sau ít phút.'
+    : `Không gửi được (${c || 'lỗi'}): ${r.error.message || ''}`.trim();
+};
 const reportBox = (type, id) => {
   const what = { post: 'bài viết', comment: 'bình luận', message: 'tin nhắn', profile: 'tài khoản' }[type] || 'nội dung';
   const sel = h('select', { 'aria-label': 'Lý do báo cáo' }, REASONS.map((x) => h('option', { value: x, textContent: x })));
   const det = h('textarea', { rows: 3, maxLength: 700, placeholder: 'Mô tả thêm (tùy chọn)', 'aria-label': 'Mô tả thêm' });
+  const err = h('p', { className: 'form-err', hidden: true });
   const go2 = h('button', { className: 'btn btn-primary', type: 'submit', textContent: 'Gửi báo cáo' });
   const close = modal(h('h2', { textContent: 'Báo cáo ' + what }), h('form', { className: 'form', onsubmit: (e) => {
     e.preventDefault();
     busy(go2, async () => {
+      err.hidden = true;
       const reason = (sel.value + (det.value.trim() ? ': ' + det.value.trim() : '')).slice(0, 1000);
-      if (await NXHN.report(user.id, type, id, reason)) { close(); say('Đã gửi báo cáo.'); }
+      const why = await sendReport(type, id, reason);
+      if (!why) { close(); say('Đã gửi báo cáo.'); } else { err.textContent = why; err.hidden = false; }
     });
-  } }, h('div', { className: 'field' }, h('label', { textContent: 'Lý do' }), sel), h('div', { className: 'field' }, det), h('div', { className: 'actions dlg-act' }, btn('Hủy', () => close()), go2)));
+  } }, h('div', { className: 'field' }, h('label', { textContent: 'Lý do' }), sel), h('div', { className: 'field' }, det), err, h('div', { className: 'actions dlg-act' }, btn('Hủy', () => close()), go2)));
   dlg(close);
 };
 // Tải ảnh lên kho 'media' (thư mục riêng của người dùng); trả về đường dẫn hoặc null.
@@ -397,7 +413,12 @@ const imageBox = ({ title, label = 'Lưu', shape = '', extra = null, onSave }) =
   ok3.onclick = async () => {
     ok3.disabled = true; ok3.textContent = 'Đang tải lên…';
     const r = await onSave(inp.files[0]);
-    if (r) close(); else { ok3.disabled = false; ok3.textContent = label; show('Không lưu được, hãy kiểm tra ảnh và thử lại.'); }
+    if (r) close();
+    else { // hiện đúng lý do (toast chỉ tồn tại 4 giây) ngay trong hộp thoại
+      ok3.disabled = false; ok3.textContent = label;
+      const t = $('status').textContent, why = /^Lỗi:/.test(t) ? t.replace(/^Lỗi:\s*/, '') : '';
+      show(why ? 'Không lưu được: ' + why : 'Không lưu được, hãy thử lại.');
+    }
   };
   return close;
 };
@@ -526,6 +547,9 @@ Object.assign(NXHN, {
     return true;
   },
   kick: (c, u) => rpc('kick_member', { p_conv: c, p_user: u }),
+  rename: (c, t) => rpc('rename_conversation', { p_conv: c, p_title: t }),
+  admPosts: (before) => rpc('admin_list_posts', { p_before: before || null, p_limit: PAGE }),
+  admDelPost: (id) => rpc('admin_delete_post', { p_id: id }),
   transferLead: (c, u) => rpc('transfer_leader', { p_conv: c, p_user: u }),
   anonLeft: () => rpc('anon_balance'),
   sendAnon: (c, body, reply, req) => rpc('send_anon_message', { p_conv: c, p_body: body, p_reply: reply || null, p_req: req }),
@@ -632,12 +656,12 @@ const anonT = h('span', { className: 'anon-t' });
 const anonBtn = h('button', { className: 'anon-pill', type: 'button', role: 'switch', 'aria-checked': 'false', hidden: true, onclick: () => setAnon(!anonOn) }, ico('shield'), anonT);
 const paintAnon = () => {
   anonBtn.classList.toggle('on', anonOn); anonBtn.setAttribute('aria-checked', String(anonOn));
-  anonBtn.disabled = left < 1 && !anonOn;
-  anonT.textContent = anonOn ? `Ẩn danh: Bật · còn ${left}/5 lượt` : left < 1 ? 'Ẩn danh: hết lượt hôm nay' : 'Ẩn danh: Tắt';
+  anonBtn.disabled = left < 1 && !anonOn && !isAdm;
+  anonT.textContent = anonOn ? (isAdm ? 'Ẩn danh: Bật · không giới hạn' : `Ẩn danh: Bật · còn ${left}/5 lượt`) : left < 1 && !isAdm ? 'Ẩn danh: hết lượt hôm nay' : 'Ẩn danh: Tắt';
   mform.classList.toggle('anon-on', anonOn); mtext.placeholder = anonOn ? 'Tin nhắn ẩn danh (chỉ chữ)…' : 'Nhập tin nhắn…';
 };
-const setAnon = (on) => { anonOn = !!on && left > 0; if (anonOn) clearFiles(); paintAnon(); syncFile(); };
-const showLeft = async () => { const n = await NXHN.anonLeft(); left = typeof n === 'number' ? n : 0; if (left < 1) anonOn = false; paintAnon(); syncFile(); };
+const setAnon = (on) => { anonOn = !!on && (left > 0 || isAdm); if (anonOn) clearFiles(); paintAnon(); syncFile(); };
+const showLeft = async () => { const n = await NXHN.anonLeft(); left = typeof n === 'number' ? n : 0; if (left < 1 && !isAdm) anonOn = false; paintAnon(); syncFile(); };
 
 // ---- Chat ----
 const cv = addView('chat', 'Chat', () => { convList(); if (cid) { pin = true; requestAnimationFrame(toEnd); } }, 'chat');
@@ -724,7 +748,8 @@ const mform = h('form', { className: 'chat-form', onsubmit: async (e) => {
   try {
     if (files.length) return await sendImages(c0, files, rid); // có ảnh → chỉ gửi ảnh, chữ đang soạn được giữ nguyên
     if (anonOn) {
-      if (left < 1) return say('Bạn đã hết lượt ẩn danh.');
+      if (left < 1 && !isAdm) return say('Bạn đã hết lượt ẩn danh.');
+      if (isAdm && left < 1) await NXHN.admGrant(user.id); // quản trị: tự nạp lượt bằng hàm admin_grant_anon có sẵn → dùng không giới hạn
       if (!(await NXHN.sendAnon(c0, body, rid, reqId))) return; // reqId giữ nguyên khi gửi lại → server không trừ lượt hai lần
       reqId = crypto.randomUUID(); showLeft();
       pin = true; mtext.value = ''; fit(); setReply(null); say('');
@@ -745,7 +770,25 @@ const ctitle = h('span', { className: 'ct-name' }), csub = h('span', { className
 const toggleInfo = (force) => { const on = force === undefined ? !chatBox.hasAttribute('data-info') : force; chatBox.toggleAttribute('data-info', on); if (on) renderInfo(); };
 const cinfo = h('button', { className: 'plain ct-info', type: 'button', 'aria-label': 'Xem thông tin cuộc trò chuyện', onclick: () => toggleInfo() }, ctitle, csub);
 const head = h('div', { className: 'chat-head' }, back, cav, cinfo, ibtn('info', 'Thông tin cuộc trò chuyện', () => toggleInfo()),
-  ibtn('more', 'Tùy chọn', (b) => { const r = b.getBoundingClientRect(); menu(r.right - 200, r.bottom + 4, [['Thông tin', () => toggleInfo(true)], isGroup ? ['Thêm thành viên', () => invitePicker()] : null, ['Xóa cuộc trò chuyện', () => clearConv(cid, ctitle.textContent), 'danger']]); }));
+  ibtn('more', 'Tùy chọn', (b) => { const r = b.getBoundingClientRect(); menu(r.right - 200, r.bottom + 4, [['Thông tin', () => toggleInfo(true)], isGroup ? ['Thêm thành viên', () => invitePicker()] : null, isGroup && curOwner === user.id ? ['Đổi tên nhóm', () => renameBox()] : null, ['Xóa cuộc trò chuyện', () => clearConv(cid, ctitle.textContent), 'danger']]); }));
+const renameBox = () => {
+  const c0 = cid, inp = h('input', { maxLength: 100, value: ctitle.textContent, 'aria-label': 'Tên nhóm' });
+  const err = h('p', { className: 'form-err', hidden: true });
+  const ok6 = h('button', { className: 'btn btn-primary', type: 'submit', textContent: 'Lưu' });
+  const close = modal(h('h2', { textContent: 'Đổi tên nhóm' }), h('form', { className: 'form', onsubmit: (e) => {
+    e.preventDefault();
+    const t = inp.value.trim();
+    if (!t) { err.textContent = 'Hãy nhập tên nhóm.'; err.hidden = false; return; }
+    if (t === ctitle.textContent) return close();
+    busy(ok6, async () => {
+      if (!(await NXHN.rename(c0, t))) return;
+      close(); say('Đã đổi tên nhóm.');
+      if (cid === c0) { ctitle.textContent = t; if (chatBox.hasAttribute('data-info')) renderInfo(); }
+      convList();
+    });
+  } }, h('div', { className: 'field' }, inp), err, h('div', { className: 'actions dlg-act' }, btn('Hủy', () => close()), ok6)));
+  dlg(close); inp.focus();
+};
 const newGroup = () => picker({ title: 'Tạo nhóm', label: 'Tạo nhóm', named: true, onDone: async (ids, name) => {
   const id = await NXHN.createConversation(ids, name);
   if (!id || id === true) return false;
@@ -836,6 +879,7 @@ const renderInfo = async () => {
     h('div', { className: 'info-act' },
       grp ? act('Thêm thành viên', () => invitePicker()) : act('Xem hồ sơ', () => openProfile(peer)),
       grp ? act('Nhãn dán của nhóm', () => stkPanel()) : null,
+      lead ? act('Đổi tên nhóm', () => renameBox()) : null,
       lead ? act('Đổi ảnh nhóm', () => groupAvatarBox()) : null,
       act('Đặt ảnh nền', () => bgBox()), s && s.bg_path ? act('Gỡ ảnh nền', () => removeBg()) : null,
       act('Xóa cuộc trò chuyện', () => clearConv(c0, title), 'btn-danger')),
@@ -873,6 +917,8 @@ const convList = async () => {
     convInfo.set(c.id, { peer: c.is_group ? null : others[0] || null, count: all.length, owner: c.owner_id || null });
     return { c, l: last[c.id], t: c.title || others.map(N).join(', ') || 'Cuộc trò chuyện' };
   }).filter(vis).sort((a, b) => new Date(b.l ? b.l.created_at : b.c.created_at) - new Date(a.l ? a.l.created_at : a.c.created_at));
+  const cur0 = rows.find((r) => r.c.id === cid); // tên/chủ nhóm đổi bởi người khác → cập nhật khung chat đang mở
+  if (cur0 && cur0.c.is_group) { ctitle.textContent = cur0.t; curOwner = cur0.c.owner_id || curOwner; }
   const prev = ({ c, l }) => !l ? 'Chưa có tin nhắn' : l.deleted_at ? 'Tin nhắn đã được xóa'
     : (l.kind === 'anon' ? 'Ẩn danh: ' : l.sender_id === user.id ? 'Bạn: ' : (c.is_group && l.sender_id ? N(l.sender_id) + ': ' : '')) + (l.body === STK_MARK ? 'Đã gửi một nhãn dán' : l.body === IMG_MARK ? 'Đã gửi một ảnh' : l.body);
   clist.replaceChildren(...rows.map((r) => {
@@ -992,7 +1038,7 @@ const adminPanel = () => {
   q.oninput = deb(users);
   return { el: h('div', {}, h('h2', { textContent: 'Tài khoản' }), q, ul), load: users };
 };
-const av = addView('admin', 'Quản trị', () => { ap.load(); af.load(true); }, 'shield');
+const av = addView('admin', 'Quản trị', () => { ap.load(); apf.load(true); af.load(true); }, 'shield');
 const af = feed((c) => NXHN.openReports(c || 0), async (ul, rows) => {
   for (const r of rows) {
     const t = { post: 'posts', comment: 'comments', message: 'messages' }[r.target_type];
@@ -1010,7 +1056,18 @@ const af = feed((c) => NXHN.openReports(c || 0), async (ul, rows) => {
     ul.append(li);
   }
 }, (c, rows) => (c || 0) + rows.length, 'Không có báo cáo đang mở.');
-const ap = adminPanel(); av.append(ap.el, h('h2', { textContent: 'Báo cáo đang mở' }), af.el);
+const apf = feed((c) => NXHN.admPosts(c), async (ul, rows) => {
+  rows.forEach((r) => {
+    const li = h('li', { className: 'post' },
+      h('div', { className: 'post-who' }, h('b', { textContent: handle(r.author_username) }), h('time', { className: 'post-time', textContent: when(r.created_at) })),
+      h('p', { className: 'post-body', textContent: (r.body || '').slice(0, 400) }),
+      h('div', { className: 'actions' }, btn('Xóa bài viết', async (b) => {
+        if (await confirmBox(`Xóa bài viết của ${handle(r.author_username)}? Không thể hoàn tác.`, 'Xóa', true, 'Xóa bài viết') && await busy(b, () => NXHN.admDelPost(r.id))) { li.remove(); say('Đã xóa bài viết.'); }
+      }, 'btn-danger')));
+    ul.append(li);
+  });
+}, (c, rows) => rows[rows.length - 1].created_at, 'Chưa có bài viết nào.');
+const ap = adminPanel(); av.append(ap.el, h('h2', { textContent: 'Bài đăng' }), apf.el, h('h2', { textContent: 'Báo cáo đang mở' }), af.el);
 tabs.append(tabBtn.people, tabBtn.home, tabBtn.chat, tabBtn.admin); // thứ tự: Mọi người, Khám phá, Chat, Quản trị
 
 // ---- Vòng đời đăng nhập/đăng xuất ----
@@ -1052,7 +1109,7 @@ const reset = () => {
   names.clear(); avPath.clear(); avUrl.clear(); avDone.clear(); stickers.clear(); cstate.clear(); fol.clear(); frd.clear(); convInfo.clear();
   cid = null; peer = null; curOwner = null; clearInterval(timer);
   [ch, ch2, ch3].forEach((c) => { if (c) sb.removeChannel(c); }); ch = ch2 = ch3 = null;
-  [clist, mlist, plist, infoEl].forEach((x) => x.replaceChildren()); [nf, af].forEach((f) => f.clear());
+  [clist, mlist, plist, infoEl].forEach((x) => x.replaceChildren()); [nf, af, apf].forEach((f) => f.clear());
   sq.value = ''; mtext.value = ''; fit(); clearFiles(); anonOn = false; left = 0; paintAnon(); setReply(null);
   chatBox.removeAttribute('data-open'); chatBox.removeAttribute('data-info'); applyBg(null);
   bellBadge.hidden = true; hdr.hidden = true; accBtn.replaceChildren(); tabBtn.admin.hidden = true; isAdm = false; ptab = 'search'; pnone.hidden = true;
