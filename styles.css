@@ -330,3 +330,24 @@ input[type="checkbox"] { width: 1.2rem; height: 1.2rem; min-height: 0; flex: 0 0
 .lb-scroll img { max-width: 100%; max-height: calc(100dvh - 5.5rem); object-fit: contain; cursor: zoom-in; }
 .lightbox.actual .lb-scroll { place-items: start; }
 .lightbox.actual .lb-scroll img { max-width: none; max-height: none; cursor: zoom-out; }
+
+/* Group chat: ẩn danh, menu ngữ cảnh, hồ sơ, quản trị */
+.chat-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.chat-head h2 { margin: 0; }
+.avatar { display: inline-grid; place-items: center; width: 1.7rem; height: 1.7rem; flex: 0 0 1.7rem; border-radius: 50%; background: #173747; color: var(--blue); font-size: .8rem; font-weight: 800; }
+.avatar.anon-av { background: #2a2f38; color: var(--muted); }
+.avatar.big { width: 3.4rem; height: 3.4rem; flex-basis: 3.4rem; font-size: 1.5rem; }
+.who { display: inline-flex; align-items: center; gap: .4rem; vertical-align: middle; }
+.name-link { padding: 0; border: 0; background: none; color: var(--ink); font-weight: 800; cursor: pointer; }
+.messages .msg { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.msg.anon { align-self: flex-start; border-style: dashed; border-color: var(--line-gold); background: #17140c; }
+.quote { margin: .35rem 0 0; padding: .2rem .5rem; border-left: 3px solid var(--blue); color: var(--muted); font-size: .8rem; }
+.reply-bar { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .3rem .6rem; border-left: 3px solid var(--blue); background: #10212c; font-size: .82rem; }
+.reply-bar span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-form .anon-opt { grid-column: 1 / -1; min-height: 0; font-size: .85rem; }
+.ctx { position: fixed; z-index: 60; min-width: 11rem; padding: .3rem; border: 1px solid var(--line-gold); border-radius: .8rem; background: var(--surface-2); box-shadow: var(--shadow); }
+.ctx-item { display: block; width: 100%; min-height: var(--tap); padding: .5rem .8rem; border: 0; border-radius: .6rem; background: none; text-align: left; font-weight: 650; cursor: pointer; }
+.ctx-item:hover, .ctx-item:focus-visible { background: var(--surface-3); }
+.ctx-item.danger { color: #ffb8c0; }
+.modal { align-items: center; justify-content: center; }
+.sheet { width: min(100%, 26rem); max-height: 85dvh; overflow-y: auto; }
