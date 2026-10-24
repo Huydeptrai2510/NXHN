@@ -194,10 +194,18 @@ const like = (s) => '%' + s.replace(/[\\%_]/g, '\\$&') + '%';
 const deb = (fn) => { let t = 0; return () => { clearTimeout(t); t = setTimeout(fn, 300); }; };
 Object.assign(NXHN, {
   sendMessage: (c, s, body, reply) => sb.from('messages').insert({ conversation_id: c, sender_id: s, body, ...(reply ? { reply_to: reply } : {}) }).select().single().then(ok),
-  loadMessages: (c, before) => {
-    let q = sb.from('messages').select('id,body,sender_id,created_at,kind,reply:messages!reply_to(body)').eq('conversation_id', c).order('created_at', { ascending: false }).limit(PAGE);
-    if (before) q = q.lt('created_at', before);
-    return q.then(ok);
+  loadMessages: async (c, before) => {
+    const run = (cols) => { let q = sb.from('messages').select(cols).eq('conversation_id', c).order('created_at', { ascending: false }).limit(PAGE); if (before) q = q.lt('created_at', before); return q; };
+    let r = await run('id,body,sender_id,created_at,kind,reply_to');
+    if (r.error) r = await run('id,body,sender_id,created_at'); // chưa chạy SQL mới → chat cũ vẫn hoạt động
+    const rows = ok(r);
+    if (!Array.isArray(rows)) return rows;
+    const ids = [...new Set(rows.map((m) => m.reply_to).filter(Boolean))];
+    if (ids.length) {
+      const by = Object.fromEntries(((await sb.from('messages').select('id,body').in('id', ids)).data || []).map((x) => [x.id, x]));
+      rows.forEach((m) => { m.reply = by[m.reply_to] || null; });
+    }
+    return rows;
   },
   anonLeft: () => rpc('anon_balance'),
   sendAnon: (c, body, reply, req) => rpc('send_anon_message', { p_conv: c, p_body: body, p_reply: reply || null, p_req: req }),
