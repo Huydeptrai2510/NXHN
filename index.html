@@ -12,6 +12,7 @@
 <header class="site-header">
   <div class="brand-mark" aria-hidden="true">N</div>
   <div class="brand-copy"><h1 class="brand">NXHN</h1><p class="tagline">Nói Xã Hội Nghe</p></div>
+  <div id="hdr-tools" class="hdr-tools" hidden></div>
 </header>
 <main class="container">
 <p id="status" class="status" role="status" aria-live="polite"></p>
@@ -36,7 +37,7 @@
 </section>
 
 <section id="app-view" hidden>
-  <div class="userbar">
+  <div class="userbar" hidden>
     <p>Xin chào, <b id="me-name"></b></p>
     <button id="btn-signout" class="btn btn-secondary btn-small" type="button">Đăng xuất</button>
   </div>
@@ -55,9 +56,9 @@
     <textarea id="post-body" maxlength="5000" rows="3" placeholder="Bạn đang nghĩ gì?" required></textarea>
     <div class="actions"><button id="btn-post" class="btn btn-primary" type="submit">Đăng bài</button></div>
   </form>
-  <h2>Dòng thời gian</h2>
+  <h2>Khám phá</h2>
   <ul id="timeline" class="timeline"></ul>
-  <p id="timeline-empty" class="empty" hidden>Chưa có bài viết. Hãy đăng bài đầu tiên hoặc follow người khác.</p>
+  <p id="timeline-empty" class="empty" hidden>Chưa có bài viết. Hãy đăng bài đầu tiên, hoặc kết bạn/theo dõi người khác để thấy bài của họ.</p>
   <button id="btn-more" class="btn btn-secondary" type="button" hidden>Tải thêm</button>
 </section>
 
@@ -72,7 +73,12 @@ const SUPABASE_ANON_KEY = 'sb_publishable_C_t4FXZtsOdW4vkAYp7kzw_LiEO1MLW';
 const PAGE = 20;
 
 const $ = (id) => document.getElementById(id);
-const say = (m) => { $('status').textContent = m || ''; };
+let sayT = 0; // toast: tự ẩn sau 4 giây (trừ thông báo đang xử lý kết thúc bằng …)
+const say = (m) => {
+  const s = $('status'); s.textContent = m || ''; s.classList.toggle('err', /^Lỗi/.test(m || ''));
+  clearTimeout(sayT);
+  if (m && !/…$/.test(m)) sayT = setTimeout(() => { s.textContent = ''; }, 4000);
+};
 if (SUPABASE_URL.includes('YOUR-PROJECT')) {
   say('Chưa cấu hình SUPABASE_URL và SUPABASE_ANON_KEY trong index.html.');
   throw new Error('Chưa cấu hình');
@@ -203,7 +209,7 @@ async function loadMore(reset) {
   $('btn-more').disabled = false;
   if (!Array.isArray(rows)) return; // lỗi đã hiển thị ở #status
   say('');
-  rows.forEach((p) => $('timeline').append(renderPost(p)));
+  rows.filter((p) => !p.community_id).forEach((p) => $('timeline').append(renderPost(p))); // chỉ bài của bạn bè/người đã theo dõi; bài cộng đồng không còn hiển thị
   if (rows.length) cursor = rows[rows.length - 1].created_at;
   $('timeline-empty').hidden = $('timeline').children.length > 0;
   $('btn-more').hidden = rows.length < PAGE;
