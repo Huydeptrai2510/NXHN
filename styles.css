@@ -648,7 +648,7 @@ html {
 /* ===== NXHN: ĐIỀU CHỈNH VỊ TRÍ TOÀN BỘ TRANG ===== */
 :root {
     /* TĂNG số này để đẩy toàn bộ trang xuống */
-    --page-offset-top: 35px;
+    --page-offset-top: 200px;
 }
 @media screen and (max-width: 768px) {
     body {
