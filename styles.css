@@ -752,7 +752,7 @@ html {
 :root {
     /* Tăng số này để đẩy giao diện xuống.
        Ví dụ: 0px, 20px, 35px, 50px */
-    --page-offset-top: 100px;
+    --page-offset-top: 0px;
 }
 
 
