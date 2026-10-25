@@ -644,3 +644,45 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
+/* ===== FIX IPHONE WEB APP SAFE AREA ===== */
+
+html {
+    min-height: 100%;
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+/* Chừa khoảng trống cho tai thỏ và thanh trạng thái */
+#app,
+.app,
+.app-container,
+.app-shell {
+    box-sizing: border-box;
+}
+
+/* Điều chỉnh header để logo không bị che */
+header,
+.app-header,
+.top-header,
+.main-header {
+    padding-top: max(12px, env(safe-area-inset-top));
+}
+
+/* Hỗ trợ màn hình có tai thỏ */
+body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+}
+
+/* Hạn chế nội dung bị tràn xuống vùng Home Indicator */
+#app,
+.app,
+.app-container,
+.app-shell {
+    padding-bottom: env(safe-area-inset-bottom);
+}
