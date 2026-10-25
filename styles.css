@@ -622,3 +622,25 @@ div.quote { cursor: default; font-style: italic; }
 .info-act .btn-danger { color: #ffb8c0; }
 .tag.lock-tag { border-color: var(--danger); color: #ffb8c0; }
 @media (max-width: 480px) { .bubble { max-width: 86%; } .ctx { max-width: calc(100vw - 8px); } }
+/* ===== NXHN — FIX SAFARI AUTO-ZOOM ON INPUT ===== */
+/* Ngăn Safari trên iPhone tự phóng to khi focus vào ô nhập liệu. */
+input,
+textarea,
+select {
+  font-size: 16px !important;
+}
+/* Giữ cỡ chữ 16px cho ô nhập tin nhắn trên iPhone. */
+.chat-form textarea {
+  font-size: 16px !important;
+}
+/* Giữ nguyên cỡ chữ khi ô nhập được focus. */
+input:focus,
+textarea:focus,
+select:focus {
+  font-size: 16px !important;
+}
+/* Đảm bảo iOS không tự điều chỉnh cỡ chữ của trang. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
