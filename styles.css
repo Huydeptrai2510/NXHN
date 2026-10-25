@@ -644,15 +644,15 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
-/* FIX: ĐẨY GIAO DIỆN XUỐNG TRONG WEB APP IPHONE */
+
+/* ===== NXHN: ĐIỀU CHỈNH VỊ TRÍ TOÀN BỘ TRANG ===== */
+:root {
+    /* TĂNG số này để đẩy toàn bộ trang xuống */
+    --page-offset-top: 35px;
+}
 @media screen and (max-width: 768px) {
     body {
-        padding-top: 0 !important;
-    }
-    .app-shell,
-    .app-container,
-    #app {
         box-sizing: border-box;
-        padding-top: calc(env(safe-area-inset-top) + 20px) !important;
+        padding-top: var(--page-offset-top) !important;
     }
 }
