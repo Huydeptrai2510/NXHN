@@ -717,38 +717,47 @@ input.file-native { position: absolute; width: 1px; height: 1px; min-height: 0; 
 
 
 
-/* ===== NXHN — FIX SAFARI AUTO-ZOOM ON INPUT ===== */
-/* Ngăn Safari trên iPhone tự phóng to khi focus vào ô nhập liệu. */
+
+/* ==================================================
+   NXHN — SAFARI AUTO-ZOOM FIX + WEB APP PAGE OFFSET
+   ================================================== */
+
+
+/* ===== 1. CHỐNG SAFARI TỰ PHÓNG TO KHI NHẬP LIỆU ===== */
+
 input,
 textarea,
 select {
-  font-size: 16px !important;
+    font-size: 16px !important;
 }
-/* Giữ cỡ chữ 16px cho ô nhập tin nhắn trên iPhone. */
+
 .chat-form textarea {
-  font-size: 16px !important;
+    font-size: 16px !important;
 }
-/* Giữ nguyên cỡ chữ khi ô nhập được focus. */
+
 input:focus,
 textarea:focus,
 select:focus {
-  font-size: 16px !important;
-}
-/* Đảm bảo iOS không tự điều chỉnh cỡ chữ của trang. */
-html {
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
+    font-size: 16px !important;
 }
 
-```css
-/* ===== NXHN WEB APP — GLOBAL PAGE OFFSET ===== */
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+
+/* ===== 2. THÔNG SỐ ĐIỀU CHỈNH VỊ TRÍ TOÀN TRANG ===== */
 
 :root {
-    /* TĂNG/GIẢM THÔNG SỐ NÀY ĐỂ ĐIỀU CHỈNH */
-    --page-offset-top: 50px;
+    /* Tăng số này để đẩy giao diện xuống.
+       Ví dụ: 0px, 20px, 35px, 50px */
+    --page-offset-top: 60px;
 }
 
-/* Cho phép trang cuộn theo chiều dọc */
+
+/* ===== 3. CẤU HÌNH CUỘN TRANG ===== */
+
 html {
     overflow-y: auto;
 }
@@ -759,18 +768,21 @@ body {
     overflow-x: hidden;
 }
 
-/* Đẩy toàn bộ khung ứng dụng xuống */
+
+/* ===== 4. ĐIỀU CHỈNH VỊ TRÍ GIAO DIỆN ===== */
+
 .app-shell {
     position: relative;
     top: var(--page-offset-top);
     box-sizing: border-box;
 }
 
-/* Tránh nội dung tràn ngang trên điện thoại */
+
+/* ===== 5. TƯƠNG THÍCH MÀN HÌNH NHỎ ===== */
+
 @media screen and (max-width: 768px) {
     .app-shell {
         width: 100%;
         max-width: 100%;
     }
 }
-```
