@@ -47,7 +47,7 @@ const ICON = {
   gear: 'M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2zM15 12a3 3 0 11-6 0 3 3 0 016 0z',
   shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z', trash: 'M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6',
   sticker: 'M12 3a9 9 0 109 9V3zM9 10h.01M15 10h.01M8.5 14.5c1.7 2 5.3 2 7 0', info: 'M12 3a9 9 0 100 18 9 9 0 000-18zM12 11v5M12 8h.01',
-  logout: 'M9 21H5V3h4M16 17l5-5-5-5M21 12H9', reply: 'M9 14L4 9l5-5M4 9h10a6 6 0 016 6v3', pin: 'M12 17v5M8 3h8l-1.5 6 3 3.5H6.5l3-3.5z', bookmark: 'M6 3h12v18l-6-4-6 4z', flag: 'M5 21V4M5 4h13l-2 4 2 4H5', copy: 'M9 9h11v11H9zM5 15V4h11', user: 'M20 21v-1a5 5 0 00-5-5H9a5 5 0 00-5 5v1M12 11a4 4 0 100-8 4 4 0 000 8z',
+  logout: 'M9 21H5V3h4M16 17l5-5-5-5M21 12H9', reply: 'M9 14L4 9l5-5M4 9h10a6 6 0 016 6v3', pin: 'M12 17v5M8 3h8l-1.5 6 3 3.5H6.5l3-3.5z', bookmark: 'M6 3h12v18l-6-4-6 4z', flag: 'M5 21V4M5 4h13l-2 4 2 4H5', copy: 'M9 9h11v11H9zM5 15V4h11', medal: 'M12 15a6 6 0 100-12 6 6 0 000 12zM8.2 13.3L7 22l5-3 5 3-1.2-8.7', poll: 'M3 20h18M6 20v-9M12 20V4M18 20v-6', check: 'M5 12l5 5 9-10', at: 'M16 12a4 4 0 11-8 0 4 4 0 018 0zM16 8v5a3 3 0 006 0v-1a10 10 0 10-3.92 7.94', user: 'M20 21v-1a5 5 0 00-5-5H9a5 5 0 00-5 5v1M12 11a4 4 0 100-8 4 4 0 000 8z',
 };
 const ico = (n) => {
   const s = document.createElementNS(SVGNS, 'svg'), p = document.createElementNS(SVGNS, 'path');
@@ -55,6 +55,16 @@ const ico = (n) => {
   p.setAttribute('d', ICON[n] || ICON.more); s.append(p); return s;
 };
 const ibtn = (icon, label, fn, cls = '') => h('button', { className: 'ibtn ' + cls, type: 'button', title: label, 'aria-label': label, onclick: (e) => { e.stopPropagation(); fn(e.currentTarget); } }, ico(icon));
+// Nút chọn ảnh thống nhất: ô file gốc được ẩn (vẫn dùng được bằng bàn phím), hiện nút gọn + tên tệp + nút bỏ chọn.
+const pickBtn = (inp, text = 'Chọn ảnh', none = 'Chưa chọn ảnh') => {
+  inp.classList.add('file-native');
+  const name = h('span', { className: 'file-name', textContent: none });
+  const x = ibtn('x', 'Bỏ ảnh đã chọn', () => { inp.value = ''; inp.dispatchEvent(new Event('change')); }, 'file-x');
+  const sync = () => { const f = inp.files && inp.files[0]; name.textContent = f ? f.name : none; x.hidden = !f; };
+  inp.addEventListener('change', sync); sync();
+  const box = h('div', { className: 'file-row' }, h('label', { className: 'file-pick' }, inp, h('span', { className: 'file-btn' }, ico('image'), text), name), x);
+  box.sync = sync; return box;
+};
 // Avatar: cùng một tài khoản luôn cùng chữ cái + màu (màu sinh từ id) ở danh sách chat, khung chat, hồ sơ, Khám phá.
 const hue = (s) => { let n = 0; for (const c of String(s || '?')) n = (n * 31 + c.charCodeAt(0)) % 360; return n; };
 const av0 = (name, cls = '', key = name) => {
@@ -92,7 +102,7 @@ const followBtn = (id) => {
 };
 const rpc = (n, a) => sb.rpc(n, a).then(({ data, error }) => (error ? fail(error.code === 'P0001' ? { userMessage: error.message } : /PGRST202|42883/.test(error.code || '') ? { userMessage: `Chưa áp dụng SQL nâng cấp (hàm ${n}).` } : error) : (data ?? true)));
 const deb = (fn) => { let t = 0; return () => { clearTimeout(t); t = setTimeout(fn, 300); }; };
-let cid = null, oldest = null, ch = null, ch2 = null, ch3 = null, timer = 0, me = null, fol = new Set(), frd = new Set(), isAdm = false, isGroup = false, peer = null, sending = false, replyTo = null, reqId = crypto.randomUUID();
+let cid = null, oldest = null, ch = null, ch2 = null, ch3 = null, ch4 = null, timer = 0, actT = 0, lastAct = 0, me = null, fol = new Set(), frd = new Set(), isAdm = false, isGroup = false, peer = null, sending = false, replyTo = null, reqId = crypto.randomUUID();
 
 Object.assign(NXHN, {
   findUser: (u) => sb.from('profiles').select('id,username,bio').neq('id', user.id).eq('username', u).limit(1).then(ok), // chỉ khớp chính xác @username
@@ -237,14 +247,14 @@ window.decoratePost = (li, p) => { // được renderPost() trong index.html g�
   li.append(media, bar); queueImg(media, 'post_id', p.id);
 };
 const pform = $('post-form'), pfile = h('input', { type: 'file', accept: IMG, 'aria-label': 'Ảnh đính kèm (tùy chọn)' });
-pform.querySelector('.actions').prepend(pfile);
+const pfp = pickBtn(pfile, 'Thêm ảnh'); pform.querySelector('.actions').prepend(pfp);
 pform.onsubmit = (e) => {
   e.preventDefault();
   return lock(['btn-post'], async () => {
     const p = await NXHN.createPost(user.id, $('post-body').value.trim());
     if (!p) return;
     if (pfile.files[0]) await NXHN.uploadImage(user.id, pfile.files[0], { post_id: p.id });
-    $('post-body').value = ''; pfile.value = ''; say(''); loadMore(true);
+    $('post-body').value = ''; pfile.value = ''; pfp.sync(); say(''); loadMore(true);
   });
 };
 
@@ -324,7 +334,7 @@ pv.append(h('h2', { textContent: 'Mọi người' }), h('div', { className: 'seg
 
 // ---- Hộp thoại thống nhất: modal giữa màn hình, xác nhận, báo cáo, chọn ảnh, chọn thành viên ----
 const MAXIMG = 5 * 1024 * 1024, OKIMG = IMG.split(',');
-const IMG_MARK = '[ảnh]', STK_MARK = '[nhãn dán]'; // nội dung đánh dấu cho tin chỉ có ảnh / nhãn dán (không có chữ của người dùng)
+const IMG_MARK = '[ảnh]', STK_MARK = '[nhãn dán]', POLL_MARK = '[bình chọn]'; // nội dung đánh dấu cho tin chỉ có ảnh / nhãn dán (không có chữ của người dùng)
 const stickers = new Map(), cstate = new Map();
 let curOwner = null, pfiles = [], anonOn = false, left = 0;
 const modal = (...k) => {
@@ -336,11 +346,12 @@ const modal = (...k) => {
 const dlg = (close) => { close.sheet.classList.add('dialog'); return close; };
 const infoBox = (title, text) => { const c = modal(h('h2', { textContent: title }), h('p', { className: 'dlg-msg', textContent: text }), h('div', { className: 'actions dlg-act' }, btn('Đóng', () => c(), 'btn-primary'))); dlg(c); };
 // askBox: false nếu hủy/đóng; true (hoặc { note } khi có ô nhập) nếu xác nhận.
-const askBox = ({ title = 'Xác nhận', msg = '', label = 'Xác nhận', danger = false, input = '' }) => new Promise((res) => {
+const askBox = ({ title = 'Xác nhận', msg = '', label = 'Xác nhận', danger = false, input = '', select = null }) => new Promise((res) => {
   let done = false; const fin = (v) => { if (!done) { done = true; res(v); } };
   const ta = input ? h('textarea', { rows: 3, maxLength: 500, placeholder: input, 'aria-label': input }) : null;
-  const close = modal(h('h2', { textContent: title }), msg ? h('p', { className: 'dlg-msg', textContent: msg }) : null, ta,
-    h('div', { className: 'actions dlg-act' }, btn('Hủy', () => { close(); fin(false); }), btn(label, () => { close(); fin(ta ? { note: ta.value.trim() } : true); }, danger ? 'btn-danger' : 'btn-primary')));
+  const sl = select ? h('select', { 'aria-label': 'Thời hạn' }, select.map(([v, t]) => h('option', { value: v, textContent: t }))) : null;
+  const close = modal(h('h2', { textContent: title }), msg ? h('p', { className: 'dlg-msg', textContent: msg }) : null, ta, sl && h('div', { className: 'field' }, sl),
+    h('div', { className: 'actions dlg-act' }, btn('Hủy', () => { close(); fin(false); }), btn(label, () => { close(); fin(ta || sl ? { note: ta ? ta.value.trim() : '', sel: sl ? sl.value : '' } : true); }, danger ? 'btn-danger' : 'btn-primary')));
   dlg(close);
   const mo = new MutationObserver(() => { if (!close.sheet.isConnected) { mo.disconnect(); fin(false); } }); mo.observe(document.body, { childList: true });
 });
@@ -397,13 +408,14 @@ const noSql = (e, what) => (e && /PGRST20[45]|42703|42P01|PGRST205/.test((e.code
 // Chọn ảnh → xem trước → Hủy/Lưu (có loading + lỗi). onSave(file) trả true nếu thành công.
 const imageBox = ({ title, label = 'Lưu', shape = '', extra = null, onSave }) => {
   const inp = h('input', { type: 'file', accept: IMG, 'aria-label': 'Chọn ảnh' });
-  const hint = () => h('span', { className: 'hint', textContent: 'Chưa chọn ảnh' });
+  const hint = () => h('span', { className: 'hint', textContent: 'Chạm để chọn ảnh' });
   const prev = h('div', { className: 'img-prev ' + shape }, hint());
   const err = h('p', { className: 'form-err', hidden: true });
   const ok3 = h('button', { className: 'btn btn-primary', type: 'button', textContent: label, disabled: true });
   let url = null;
-  const close = modal(h('h2', { textContent: title }), prev, inp, extra && extra.el, err, h('div', { className: 'actions dlg-act' }, btn('Hủy', () => close()), ok3));
+  const close = modal(h('h2', { textContent: title }), prev, pickBtn(inp, 'Chọn ảnh từ thiết bị'), extra && extra.el, err, h('div', { className: 'actions dlg-act' }, btn('Hủy', () => close()), ok3));
   dlg(close);
+  prev.onclick = () => inp.click();
   const show = (m) => { err.textContent = m || ''; err.hidden = !m; };
   inp.onchange = () => {
     const f = inp.files[0]; show(''); ok3.disabled = true;
@@ -569,7 +581,7 @@ const MISSING = /PGRST20[245]|PGRST202|42P01|42883|42703|Could not find/;
 const soft = (r, what) => {
   if (!r.error) return r.data == null ? true : r.data;
   const m = (r.error.code || '') + ' ' + (r.error.message || '');
-  return fail(MISSING.test(m) ? { userMessage: `Máy chủ chưa có ${what}: hãy chạy file nxhn_chat_upgrade.sql.` } : r.error.code === 'P0001' ? { userMessage: r.error.message } : r.error);
+  return fail(MISSING.test(m) ? { userMessage: `Máy chủ chưa có ${what}: hãy chạy nxhn_chat_upgrade.sql rồi nxhn_chat_upgrade_2.sql.` } : r.error.code === 'P0001' ? { userMessage: r.error.message } : r.error);
 };
 const saved = new Set(), mine = new Map(), pinIds = new Set();
 let perm = { can_send: true }, preloaded = false;
@@ -623,9 +635,9 @@ const refreshPerm = async () => {
 };
 addEventListener('focus', () => { if (cid && isGroup) refreshPerm(); });
 const toggleRestrict = async (c0, id, on) => {
-  let note = '';
-  if (on) { const r = await askBox({ title: 'Khóa chat thành viên', msg: `${N(id)} sẽ không gửi được tin nhắn trong nhóm này nhưng vẫn xem được nội dung.`, label: 'Khóa chat', danger: true, input: 'Lý do (tùy chọn)' }); if (!r) return; note = r.note || ''; }
-  if (await NXHN.restrict(c0, id, on, note)) { say(on ? 'Đã khóa chat thành viên.' : 'Đã mở khóa chat.'); if (c0 === cid) renderInfo(); }
+  let note = '', mins = null;
+  if (on) { const r = await askBox({ title: 'Khóa chat thành viên', msg: `${N(id)} sẽ không gửi được tin nhắn trong nhóm này nhưng vẫn xem được nội dung.`, label: 'Khóa chat', danger: true, input: 'Lý do (tùy chọn)', select: [['', 'Không giới hạn thời gian'], ['10', '10 phút'], ['60', '1 giờ'], ['1440', '1 ngày'], ['10080', '7 ngày']] }); if (!r) return; note = r.note || ''; mins = +r.sel || null; }
+  if (await NXHN.restrict(c0, id, on, note, mins)) { say(on ? 'Đã khóa chat thành viên.' : 'Đã mở khóa chat.'); if (c0 === cid) renderInfo(); }
 };
 const openAt = (c, id) => { go('chat'); if (cid === c) return jumpTo(id); const b = clist.querySelector(`.conv[data-id="${c}"]`); if (!b) return say('Hãy mở cuộc trò chuyện chứa tin nhắn này.'); b.click(); setTimeout(() => jumpTo(id), 1000); };
 // Danh sách tin tham chiếu (ghim / lưu): chỉ lấy ID rồi tra tin gốc → không sao chép nội dung; tin đã xóa/mất quyền hiện thông báo trung tính
@@ -681,13 +693,20 @@ const profile = async (id) => {
   names.set(id, p.username); await nm([id]);
   const k = hue(id), dn = p.display_name && p.display_name !== p.username ? p.display_name : null, cnt = fc == null ? (self ? frd.size : null) : fc;
   const cover = h('div', { className: 'cover' }); cover.style.background = `linear-gradient(135deg, hsl(${k} 45% 22%), hsl(${(k + 60) % 360} 50% 12%))`;
-  const acts = self ? [btn('Chỉnh sửa hồ sơ', () => { close(); go('settings'); }, 'btn-primary'), btn('Đổi ảnh đại diện', () => avatarBox())]
-    : [btn('Nhắn tin', (b) => dm(id, b, close), 'btn-primary'), followBtn(id), ibtn('more', 'Tùy chọn', (b) => { const q2 = b.getBoundingClientRect(); menu(q2.right - 190, q2.bottom + 4, [['Báo cáo hồ sơ', () => reportBox('profile', id)]]); })];
+  const acts = self ? [btn('Chỉnh sửa hồ sơ', () => { close(); go('settings'); }, 'btn-primary'), btn('Đổi ảnh đại diện', () => avatarBox()), ibtn('medal', 'Thành tựu', () => achBox(id))]
+    : [btn('Nhắn tin', (b) => dm(id, b, close), 'btn-primary'), followBtn(id), ibtn('medal', 'Thành tựu', () => achBox(id)), ibtn('more', 'Tùy chọn', (b) => { const q2 = b.getBoundingClientRect(); menu(q2.right - 190, q2.bottom + 4, [['Báo cáo hồ sơ', () => reportBox('profile', id)]]); })];
   const pfd = feed((cur) => NXHN.userPosts(id, cur), async (ul, rows) => { rows.forEach((r2) => ul.append(renderPost({ ...r2, author: { username: p.username } }))); }, (c, rows) => rows[rows.length - 1].created_at, 'Chưa có bài viết công khai.');
+  const strip = h('div', { className: 'badge-strip', hidden: true });
   sh.replaceChildren(x, cover, h('div', { className: 'profile-top' }, avt(id, 'huge'), h('div', { className: 'profile-act' }, acts)),
     h('h2', { className: 'profile-name', textContent: dn || handle(p.username) }), h('p', { className: 'post-time handle', textContent: handle(p.username) + (cnt == null ? '' : ` · ${cnt} bạn bè`) }),
-    h('p', { className: 'post-body', textContent: p.bio || 'Chưa có giới thiệu.' }), h('h3', { className: 'sec', textContent: 'Bài viết' }), pfd.el);
+    h('p', { className: 'post-body', textContent: p.bio || 'Chưa có giới thiệu.' }), strip, h('h3', { className: 'sec', textContent: 'Bài viết' }), pfd.el);
   pfd.load(true);
+  NXHN.ach(self ? null : id).then((a) => { // dải huy hiệu: chỉ hiện khi có danh hiệu và được phép xem
+    const e = a && Array.isArray(a.defs) ? a.defs.filter((x) => x.earned_at) : [];
+    if (!e.length) return;
+    strip.hidden = false;
+    strip.replaceChildren(...e.slice(0, 6).map((x) => h('span', { className: 'badge-chip', title: x.name + ' — ' + x.description, textContent: x.icon })), ...(e.length > 6 ? [lk('+' + (e.length - 6), () => achBox(id))] : []));
+  });
 };
 
 // ---- Menu ngữ cảnh: chuột phải (máy tính) hoặc nhấn giữ 0,5 giây (cảm ứng) ----
@@ -707,7 +726,7 @@ addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCtx(); });
 
 // ---- Tin nhắn ----
 const qname = (m) => (m.kind === 'anon' ? 'Ẩn danh' : m.sender_id === user.id ? 'Bạn' : m.sender_id ? N(m.sender_id) : 'Tin nhắn');
-const qtext = (m) => (!m ? '' : m.deleted_at ? 'Tin nhắn đã được xóa' : m.sticker_id || m.body === STK_MARK ? 'Nhãn dán' : m.body === IMG_MARK ? 'Ảnh' : m.body);
+const qtext = (m) => (!m ? '' : m.deleted_at ? 'Tin nhắn đã được xóa' : m.sticker_id || m.body === STK_MARK ? 'Nhãn dán' : m.body === IMG_MARK ? 'Ảnh' : m.body === POLL_MARK ? 'Bình chọn' : m.body);
 const goneRow = (id) => h('li', { className: 'msg gone', 'data-id': id }, h('span', { textContent: 'Tin nhắn đã được xóa' }));
 const markGone = (id) => { // thay đúng vị trí tin cũ bằng thông báo trung tính; không hiện lại nội dung/ảnh
   saved.delete(id); if (pinIds.delete(id)) paintPins();
@@ -723,7 +742,7 @@ const delMsg = async (m) => {
   if (await NXHN.deleteMessage(m.id)) markGone(m.id);
 };
 const msgItems = (li, m) => {
-  const anon = m.kind === 'anon', own = !anon && m.sender_id === user.id, stk = !!m.sticker_id || m.body === STK_MARK, txt = !stk && m.body !== IMG_MARK;
+  const anon = m.kind === 'anon', own = !anon && m.sender_id === user.id, stk = !!m.sticker_id || m.body === STK_MARK, txt = !stk && m.body !== IMG_MARK && m.body !== POLL_MARK;
   const sv = saved.has(m.id), pn = pinIds.has(m.id), sid = m.sticker_id;
   return [
     txt ? ['Sao chép', () => navigator.clipboard.writeText(m.body).then(() => say('Đã sao chép.'), () => say('Không sao chép được.')), '', 'copy'] : null,
@@ -846,12 +865,13 @@ const sendSticker = async (s) => {
     pin = true; setReply(null); say(''); addMsg(m);
   } finally { sending = false; upd(); }
 };
-const plusBtn = ibtn('plus', 'Thêm: ảnh, nhãn dán', (b) => {
+const plusBtn = ibtn('plus', 'Thêm: ảnh, nhãn dán, bình chọn', (b) => {
   const r = b.getBoundingClientRect(), anonOnly = () => say('Tin nhắn ẩn danh chỉ gửi được chữ.');
   menu(r.left, r.top, [
     ['Chọn hình ảnh', () => (anonOn ? anonOnly() : mfile.click()), '', 'image'],
     isGroup ? ['Nhãn dán của nhóm', () => (anonOn ? anonOnly() : stkPanel()), '', 'sticker'] : null,
     ['Nhãn dán của tôi', () => (anonOn ? anonOnly() : myStkPanel()), '', 'bookmark'],
+    isGroup ? ['Tạo bình chọn', () => (anonOn ? anonOnly() : pollCreate()), '', 'poll'] : null,
   ]);
   if (ctx) ctx.style.top = Math.max(4, r.top - ctx.offsetHeight - 6) + 'px';
 }, 'comp-btn');
@@ -1044,7 +1064,7 @@ const convList = async () => {
   const cur0 = rows.find((r) => r.c.id === cid); // tên/chủ nhóm đổi bởi người khác → cập nhật khung chat đang mở
   if (cur0 && cur0.c.is_group) { ctitle.textContent = cur0.t; curOwner = cur0.c.owner_id || curOwner; }
   const prev = ({ c, l }) => !l ? 'Chưa có tin nhắn' : l.deleted_at ? 'Tin nhắn đã được xóa'
-    : (l.kind === 'anon' ? 'Ẩn danh: ' : l.sender_id === user.id ? 'Bạn: ' : (c.is_group && l.sender_id ? N(l.sender_id) + ': ' : '')) + (l.body === STK_MARK ? 'Đã gửi một nhãn dán' : l.body === IMG_MARK ? 'Đã gửi một ảnh' : l.body);
+    : (l.kind === 'anon' ? 'Ẩn danh: ' : l.sender_id === user.id ? 'Bạn: ' : (c.is_group && l.sender_id ? N(l.sender_id) + ': ' : '')) + (l.body === STK_MARK ? 'Đã gửi một nhãn dán' : l.body === IMG_MARK ? 'Đã gửi một ảnh' : l.body === POLL_MARK ? 'Đã tạo một bình chọn' : l.body);
   clist.replaceChildren(...rows.map((r) => {
     const del = () => clearConv(r.c.id, r.t);
     const li = h('li', { className: 'conv-li' },
@@ -1063,7 +1083,7 @@ const openConv = (id, title, grp, pid) => {
   const ci = convInfo.get(id) || {};
   cid = id; pin = true; isGroup = !!grp; peer = grp ? null : (pid || ci.peer || null); curOwner = ci.owner || null;
   stkBtn.hidden = anonBtn.hidden = !isGroup; anonOn = false; paintAnon(); setReply(null); clearFiles(); if (isGroup) showLeft();
-  pinIds.clear(); paintPins(); perm = { can_send: true }; applyPerm(); loadPins(id); refreshPerm(); ensureMine();
+  pinIds.clear(); paintPins(); perm = { can_send: true }; applyPerm(); loadPins(id); refreshPerm(); ensureMine(); NXHN.readConv(id);
   oldest = null;
   ctitle.textContent = title;
   csub.textContent = isGroup ? (ci.count ? ci.count + ' thành viên' : 'Nhóm chat') : ''; csub.hidden = !csub.textContent;
@@ -1077,8 +1097,8 @@ const openConv = (id, title, grp, pid) => {
 const msgRow = (m, prev) => {
   if (m.deleted_at) return goneRow(m.id);
   if (m.kind === 'system') return h('li', { className: 'msg gone sys', 'data-id': m.id }, h('span', { textContent: m.body }));
-  const anon = m.kind === 'anon', own = !anon && m.sender_id === user.id, stk = !!m.sticker_id || m.body === STK_MARK, imgOnly = m.body === IMG_MARK;
-  const media = stk ? null : h('div', { className: 'media' });
+  const anon = m.kind === 'anon', own = !anon && m.sender_id === user.id, stk = !!m.sticker_id || m.body === STK_MARK, imgOnly = m.body === IMG_MARK, isPoll = m.body === POLL_MARK;
+  const media = stk || isPoll ? null : h('div', { className: 'media' });
   // tin liên tiếp của cùng một người (trong 5 phút) chỉ hiện avatar/tên ở tin đầu cụm
   const cont = !anon && !!prev && !prev.deleted_at && prev.kind !== 'anon' && prev.kind !== 'system' && prev.sender_id === m.sender_id && new Date(m.created_at) - new Date(prev.created_at) < 300000;
   const side = own ? null : h('span', { className: 'msg-av' }, cont ? null : anon ? av0('?', 'anon-av') // ẩn danh: không avatar/tên cá nhân
@@ -1086,10 +1106,10 @@ const msgRow = (m, prev) => {
   const sd = m.sticker_id ? stickers.get(m.sticker_id) : null;
   const content = stk ? (sd && avUrl.get(sd.storage_path)
     ? h('img', { className: 'sticker', src: avUrl.get(sd.storage_path), alt: sd.name || 'Nhãn dán', draggable: false, oncontextmenu: (e) => e.preventDefault() })
-    : h('p', { className: 'post-body muted', textContent: 'Nhãn dán đã bị xóa' })) : imgOnly ? null : h('p', { className: 'post-body', textContent: m.body });
+    : h('p', { className: 'post-body muted', textContent: 'Nhãn dán đã bị xóa' })) : imgOnly ? null : isPoll ? pollCard(m) : h('p', { className: 'post-body', textContent: m.body });
   const quote = m.reply ? h('button', { className: 'quote', 'data-q': m.reply_to, type: 'button', onclick: (e) => { e.stopPropagation(); jumpTo(m.reply_to); } }, h('b', { textContent: qname(m.reply) }), h('span', { textContent: qtext(m.reply).slice(0, 80) }))
     : m.reply_to ? h('div', { className: 'quote', textContent: 'Tin nhắn gốc không còn' }) : null;
-  const bub = h('div', { className: 'bubble' + (stk ? ' stk' : '') },
+  const bub = h('div', { className: 'bubble' + (stk ? ' stk' : '') + (isPoll ? ' poll-b' : '') },
     cont || own ? null : anon ? h('b', { className: 'msg-name', textContent: 'Ẩn danh' }) : (isGroup ? h('span', { className: 'msg-name' }, nameLink(m.sender_id)) : null),
     quote, content, media,
     h('time', { className: 'post-time', dateTime: m.created_at, textContent: hm(m.created_at), title: when(m.created_at) }));
@@ -1126,23 +1146,247 @@ const loadMsgs = async (older) => {
   if (rows.length) oldest = rows[0].created_at;
   olderBtn.hidden = rows.length < PAGE;
 };
-// ---- Thông báo (chuông ở header) ----
+// ---- Bình chọn, thành tựu, thông báo thông minh (cần chạy nxhn_chat_upgrade_2.sql) ----
+const nosql = (r) => !!r.error && MISSING.test((r.error.code || '') + ' ' + (r.error.message || ''));
+const rd = (r) => (r.error ? (nosql(r) ? 'nosql' : null) : r.data); // 'nosql' = chưa chạy SQL, null = lỗi tải
 const badge = async () => {
   const n = await NXHN.unread();
   bellBadge.textContent = n > 99 ? '99+' : String(n); bellBadge.hidden = !n;
   bellBtn.setAttribute('aria-label', n ? `Thông báo (${n} chưa đọc)` : 'Thông báo');
 };
-const nv = addView('notifs', 'Thông báo', () => { nf.load(true); badge(); });
-const nf = feed((c) => NXHN.loadNotifications(c), async (ul, rows) => {
-  await nm(rows.map((r) => r.actor_id));
-  rows.forEach((r) => {
-    const li = h('li', { className: 'post notif' + (r.read_at ? '' : ' unread') }, avt(r.actor_id),
-      h('div', { className: 'notif-main' }, nameLink(r.actor_id), ` ${r.type === 'follow' ? 'đã theo dõi bạn' : 'đã bình luận bài viết của bạn'} `, h('time', { className: 'post-time', textContent: when(r.created_at) })));
-    if (!r.read_at) li.append(btn('Đã đọc', async (b) => { if (await busy(b, () => NXHN.markRead(r.id))) { li.classList.remove('unread'); b.remove(); badge(); } }));
-    ul.append(li);
+const badgeSoon = deb(badge);
+Object.assign(NXHN, {
+  createPoll: (c, f) => sb.rpc('create_poll', { p_conv: c, p_question: f.question, p_options: f.options.map((o) => o.label), p_multi: f.multi, p_anon: f.anon, p_edit_mode: f.mode, p_minutes: f.minutes || null }).then((r) => soft(r, 'bình chọn')),
+  editPoll: (d, f) => sb.rpc('edit_poll', { p_poll: d.id, p_rev: d.rev, p_question: f.question, p_options: f.options, p_multi: f.multi, p_edit_mode: f.mode, p_minutes: f.minutes }).then((r) => soft(r, 'bình chọn')),
+  closePoll: (id, on) => sb.rpc('set_poll_closed', { p_poll: id, p_closed: on }).then((r) => soft(r, 'bình chọn')),
+  vote: (id, opts) => sb.rpc('vote_poll', { p_poll: id, p_options: opts }).then((r) => soft(r, 'bình chọn')),
+  pollView: async (ids) => { const d = rd(await sb.rpc('poll_view', { p_msgs: ids })); return d === 'nosql' || d === null ? d : (Array.isArray(d) ? d : []); },
+  ach: async (uid) => rd(await sb.rpc('achievements_get', { p_user: uid || null })),
+  achPublic: (on) => sb.rpc('set_achievements_public', { p_on: on }).then((r) => soft(r, 'thành tựu')),
+  readConv: (c) => sb.from('notifications').update({ read_at: new Date().toISOString() }).eq('conversation_id', c).is('read_at', null).select('id').then((r) => { if (!r.error && r.data && r.data.length) badgeSoon(); }),
+  // f: all | unread | chat | act. Chưa chạy SQL (thiếu cột/loại mới) → tự lùi về truy vấn cũ.
+  loadNotifications: async (before, f = 'all') => {
+    const T = { chat: ['message', 'reply', 'mention', 'invite'], act: ['follow', 'comment', 'achievement'] };
+    const tries = f === 'chat' ? [T.chat] : f === 'act' ? [T.act, ['follow', 'comment']] : [null];
+    let r = null;
+    for (const ts of tries) for (const c of ['id,type,actor_id,post_id,read_at,created_at,conversation_id,message_id,meta', 'id,type,actor_id,post_id,read_at,created_at']) {
+      let qq = sb.from('notifications').select(c).order('created_at', { ascending: false }).limit(PAGE);
+      if (before) qq = qq.lt('created_at', before);
+      if (f === 'unread') qq = qq.is('read_at', null);
+      if (ts) qq = qq.in('type', ts);
+      r = await qq; if (!r.error) return r.data || [];
+    }
+    return f === 'chat' && r.error.code === '22P02' ? [] : ok(r);
+  },
+});
+const lk = (t, fn) => h('button', { className: 'plain link-btn', type: 'button', textContent: t, onclick: fn });
+
+// ---- Bình chọn: số phiếu và quyền do máy chủ tính; giao diện chỉ hiển thị kết quả máy chủ trả về ----
+const pq = new Set(); let pqt = 0;
+const pollLoad = (id) => { // gom nhiều bình chọn trong cùng khung chat vào một lượt gọi
+  pq.add(id); clearTimeout(pqt);
+  pqt = setTimeout(async () => {
+    const ids = [...pq]; pq.clear();
+    const r = await NXHN.pollView(ids);
+    ids.forEach((i) => { const d = Array.isArray(r) ? r.find((x) => x.message_id === i) : r; mlist.querySelectorAll(`.poll[data-m="${i}"]`).forEach((el) => drawPoll(el, d)); });
+  }, 30);
+};
+const pollCard = (m) => { const el = h('div', { className: 'poll', 'data-m': m.id }, h('div', { className: 'skel' })); pollLoad(m.id); return el; };
+const castVote = async (el, d, o) => {
+  if (el._busy) return; el._busy = true; el.classList.add('busy');
+  const cur = new Set(d.mine), had = cur.has(o.id);
+  if (!d.multi) cur.clear();
+  if (d.multi && had) cur.delete(o.id); else if (!had) cur.add(o.id); // chọn một: bấm lại phương án đang chọn = rút phiếu
+  await NXHN.vote(d.id, [...cur]);
+  el._busy = false; el.classList.remove('busy'); pollLoad(d.message_id);
+};
+const togglePoll = async (d, close) => {
+  const msg = close ? 'Đóng bình chọn này? Thành viên sẽ không bỏ phiếu thêm được.' : 'Mở lại bình chọn? Các phiếu đã bầu được giữ nguyên và thời hạn cũ sẽ được gỡ.';
+  if (!(await confirmBox(msg, close ? 'Đóng bình chọn' : 'Mở lại', close, close ? 'Đóng bình chọn' : 'Mở lại bình chọn'))) return;
+  if (await NXHN.closePoll(d.id, close)) pollLoad(d.message_id);
+};
+const votersBox = async (d) => {
+  await nm([...new Set(d.options.flatMap((o) => o.voters || []))]);
+  dlg(modal(h('h2', { textContent: 'Người đã bỏ phiếu' }), ...d.options.map((o) => h('div', { className: 'voters' }, h('b', { textContent: `${o.label} (${o.votes})` }),
+    h('p', { className: 'post-time handle', textContent: (o.voters || []).map(N).join(', ') || 'Chưa có phiếu' })))));
+};
+const drawPoll = (el, d) => {
+  if (!d || typeof d !== 'object') {
+    el.replaceChildren(h('div', {}, h('p', { className: 'post-body muted', textContent: d === 'nosql' ? 'Máy chủ chưa có tính năng bình chọn: hãy chạy nxhn_chat_upgrade_2.sql.' : d === null ? 'Không tải được bình chọn.' : 'Bình chọn không còn tồn tại.' }),
+      d === null ? lk('Thử lại', () => { el.replaceChildren(h('div', { className: 'skel' })); pollLoad(el.dataset.m); }) : null));
+    return;
+  }
+  const closed = d.closed || (d.closes_at && new Date(d.closes_at) <= new Date()), sel = new Set(d.mine);
+  el.classList.toggle('poll-multi', !!d.multi);
+  const opts = d.options.map((o) => {
+    const on = sel.has(o.id), pct = d.total ? Math.round((o.votes / d.total) * 100) : 0;
+    const b = h('button', { className: 'poll-opt' + (on ? ' on' : ''), type: 'button', role: d.multi ? 'checkbox' : 'radio', 'aria-checked': String(on), disabled: !!closed, onclick: () => castVote(el, d, o) },
+      h('span', { className: 'poll-fill' }), h('span', { className: 'poll-mark' }, on ? ico('check') : null), h('span', { className: 'poll-label', textContent: o.label }),
+      h('span', { className: 'poll-n', textContent: d.total ? `${o.votes} · ${pct}%` : '0' }));
+    b.firstChild.style.width = pct + '%';
+    return b;
   });
+  el.replaceChildren(
+    h('div', { className: 'poll-meta' }, h('span', { textContent: 'Bình chọn' }), h('span', { textContent: d.multi ? 'Chọn nhiều' : 'Chọn một' }), h('span', { textContent: d.anonymous ? 'Ẩn danh' : 'Công khai' })),
+    h('p', { className: 'poll-q', textContent: d.question }), ...opts,
+    h('div', { className: 'poll-foot' },
+      h('span', { textContent: `${d.total} người đã bỏ phiếu` + (closed ? ' · Đã đóng' : d.closes_at ? ' · Đóng lúc ' + when(d.closes_at) : '') }),
+      !d.anonymous && d.total ? lk('Xem người bỏ phiếu', () => votersBox(d)) : null,
+      d.can_edit && !closed ? lk('Chỉnh sửa', () => pollEdit(d)) : null,
+      d.can_close ? lk(closed ? 'Mở lại' : 'Đóng bình chọn', () => togglePoll(d, !closed)) : null));
+};
+// Biểu mẫu dùng chung cho tạo và sửa. Đã có phiếu → khóa phần làm sai lệch kết quả (máy chủ kiểm tra lại).
+const DL = [['', 'Giữ nguyên thời hạn'], ['0', 'Không giới hạn'], ['60', '1 giờ'], ['1440', '24 giờ'], ['4320', '3 ngày'], ['10080', '7 ngày']];
+const pollForm = ({ title, label, d, onSave }) => {
+  const lock = !!d && d.total > 0, mgr = !d || d.can_close;
+  const qi = h('input', { maxLength: 200, value: d ? d.question : '', placeholder: 'Câu hỏi bình chọn', 'aria-label': 'Câu hỏi bình chọn', disabled: lock });
+  const rows = h('div', { className: 'poll-edit' }), err = h('p', { className: 'form-err', hidden: true });
+  const add = btn('Thêm phương án', () => { addRow().focus(); }, 'btn-secondary');
+  const sync = () => { const n = rows.children.length; add.disabled = n >= 10; rows.querySelectorAll('.ibtn').forEach((b) => { b.disabled = n <= 2; }); };
+  const addRow = (o) => {
+    const inp = h('input', { maxLength: 100, value: o ? o.label : '', placeholder: 'Phương án', 'aria-label': 'Phương án', disabled: !!(o && lock) });
+    const row = h('div', { className: 'poll-row' }, inp, ibtn('x', 'Xóa phương án', () => { if (o && o.votes) return say('Phương án đã có phiếu nên không thể xóa.'); row.remove(); sync(); }));
+    row._o = o || null; row._i = inp; rows.append(row); sync(); return inp;
+  };
+  (d ? d.options : [null, null]).forEach((o) => addRow(o));
+  const multi = h('input', { type: 'checkbox', checked: !!(d && d.multi), disabled: !!(d && d.multi && lock) });
+  const anon = h('input', { type: 'checkbox', checked: !!(d && d.anonymous), disabled: !!d });
+  const mode = h('select', { 'aria-label': 'Ai được chỉnh sửa bình chọn', disabled: !mgr }, [['creator', 'Chỉ người tạo và trưởng nhóm'], ['members', 'Mọi thành viên trong nhóm']].map(([v, t]) => h('option', { value: v, textContent: t, selected: d ? d.edit_mode === v : v === 'creator' })));
+  const dl = h('select', { 'aria-label': 'Thời hạn bình chọn' }, DL.filter(([v]) => d || v !== '').map(([v, t]) => h('option', { value: v, textContent: t, selected: d ? v === '' : v === '0' })));
+  const ok7 = h('button', { className: 'btn btn-primary', type: 'submit', textContent: label });
+  const close = modal(h('h2', { textContent: title }), h('form', { className: 'form', onsubmit: (ev) => {
+    ev.preventDefault(); err.hidden = true;
+    const f = { question: qi.value.trim(), options: [...rows.children].map((r) => ({ id: r._o ? r._o.id : null, label: r._i.value.trim() })), multi: multi.checked, anon: anon.checked, mode: mode.value, minutes: dl.value === '' ? null : +dl.value };
+    const low = f.options.map((o) => o.label.toLowerCase());
+    const why = !f.question ? 'Hãy nhập câu hỏi.' : f.options.some((o) => !o.label) ? 'Phương án không được để trống.' : new Set(low).size < low.length ? 'Các phương án không được trùng nhau.' : '';
+    if (why) { err.textContent = why; err.hidden = false; return; }
+    busy(ok7, async () => { if (await onSave(f)) close(); });
+  } },
+  h('div', { className: 'field' }, h('label', { textContent: 'Câu hỏi' }), qi),
+  h('div', { className: 'field' }, h('label', { textContent: 'Phương án (2–10)' }), rows, add),
+  h('label', { className: 'check' }, multi, 'Cho phép chọn nhiều phương án'),
+  d ? null : h('label', { className: 'check' }, anon, 'Ẩn danh: không ai thấy ai đã bầu gì'),
+  h('div', { className: 'field' }, h('label', { textContent: 'Ai được chỉnh sửa bình chọn' }), mode),
+  h('div', { className: 'field' }, h('label', { textContent: 'Thời hạn' }), dl),
+  lock ? h('p', { className: 'field-help', textContent: 'Đã có phiếu bầu: không đổi được câu hỏi, nội dung phương án hay tắt chế độ chọn nhiều. Vẫn thêm được phương án, xóa phương án chưa có phiếu và đổi thời hạn.' }) : null,
+  err, h('div', { className: 'actions dlg-act' }, btn('Hủy', () => close()), ok7)));
+  dlg(close);
+};
+const pollEdit = (d) => pollForm({ title: 'Chỉnh sửa bình chọn', label: 'Lưu thay đổi', d, onSave: async (f) => {
+  const r = await NXHN.editPoll(d, f); pollLoad(d.message_id);
+  if (r) say('Đã cập nhật bình chọn.');
+  return !!r;
+} });
+const pollCreate = () => { const c0 = cid; pollForm({ title: 'Tạo bình chọn', label: 'Tạo bình chọn', onSave: async (f) => {
+  const id = await NXHN.createPoll(c0, f); if (!id || id === true) return false;
+  const [m] = await NXHN.msgsByIds([id]);
+  if (m && cid === c0) { pin = true; addMsg(m); }
+  say('Đã tạo bình chọn.'); return true;
+} }); };
+
+// ---- Thành tựu và danh hiệu (điều kiện, tên, ngưỡng nằm ở bảng achievement_defs trên máy chủ) ----
+const AG = { activity: 'Hoạt động', chat: 'Nhắn tin', community: 'Bạn bè và cộng đồng', personal: 'Nhãn dán và cá nhân hóa', special: 'Đặc biệt' };
+const achBox = async (uid) => {
+  const self = uid === user.id, body = h('div', {}, h('div', { className: 'skel tall' }));
+  const close = modal(h('h2', { textContent: self ? 'Thành tựu của tôi' : 'Thành tựu của ' + N(uid) }), body); dlg(close);
+  if (self) { const n = rd(await sb.rpc('check_achievements')); if (Array.isArray(n) && n.length) { say(`Bạn vừa đạt danh hiệu ${n[0].icon} ${n[0].name}`); badgeSoon(); } }
+  const a = await NXHN.ach(self ? null : uid);
+  if (!a || a === 'nosql' || !Array.isArray(a.defs)) return body.replaceChildren(h('p', { className: 'empty', textContent: a === 'nosql' ? 'Máy chủ chưa có tính năng thành tựu: hãy chạy nxhn_chat_upgrade_2.sql.' : 'Không tải được thành tựu, hãy thử lại.' }));
+  if (!a.self && !a.public) return body.replaceChildren(h('p', { className: 'empty', textContent: 'Người này không công khai thành tựu.' }));
+  const got = a.defs.filter((x) => x.earned_at).length;
+  const fmt = (x) => (/_h$/.test(x.metric) ? Math.round((+x.value || 0) * 10) / 10 : Math.floor(+x.value || 0));
+  const prog = (x) => (a.self && x.metric !== 'manual' && x.value != null ? h('div', { className: 'ach-prog' },
+    h('div', { className: 'ach-bar' }, h('i', { style: `width:${Math.min(100, Math.round(((+x.value || 0) / x.threshold) * 100))}%` })),
+    h('span', { className: 'post-time', textContent: `${fmt(x)}/${x.threshold}` })) : null);
+  const groups = [...new Set([...Object.keys(AG), ...a.defs.map((x) => x.grp)])];
+  body.replaceChildren(h('div', {},
+    h('p', { className: 'ach-sum', textContent: a.self ? `Đã đạt ${got}/${a.defs.length} danh hiệu` : `${got} danh hiệu` }),
+    a.self ? h('label', { className: 'check' }, h('input', { type: 'checkbox', checked: !!a.public, onchange: async (e) => {
+      const on = e.target.checked;
+      if (await NXHN.achPublic(on)) say(on ? 'Người khác có thể xem thành tựu của bạn.' : 'Đã ẩn thành tựu của bạn.'); else e.target.checked = !on;
+    } }), 'Cho phép người khác xem thành tựu của tôi') : null,
+    ...groups.map((g) => { const L = a.defs.filter((x) => x.grp === g); return L.length ? h('div', {}, h('h3', { className: 'sec', textContent: AG[g] || g }),
+      h('ul', { className: 'ach-list' }, L.map((x) => h('li', { className: 'ach' + (x.earned_at ? '' : ' off') }, h('span', { className: 'ach-ic', textContent: x.icon }),
+        h('div', { className: 'ach-main' }, h('b', { textContent: x.name }), h('span', { textContent: x.description }),
+          x.earned_at ? h('span', { className: 'post-time', textContent: 'Đạt ngày ' + new Date(x.earned_at).toLocaleDateString('vi-VN') }) : prog(x)))))) : null; })));
+};
+// Ghi nhận hoạt động thật: chỉ khi tab đang hiển thị và có thao tác trong 2 phút gần nhất; máy chủ giới hạn tốc độ và trần mỗi ngày
+['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach((ev) => addEventListener(ev, () => { lastAct = Date.now(); }, { passive: true, capture: true }));
+const pingAct = async () => {
+  if (!user || document.visibilityState !== 'visible' || Date.now() - lastAct > 120000) return;
+  const r = await sb.rpc('ping_activity');
+  if (r.error) { if (nosql(r)) clearInterval(actT); return; }
+  if (Array.isArray(r.data) && r.data.length) { say(`Bạn vừa đạt danh hiệu ${r.data[0].icon} ${r.data[0].name}`); badgeSoon(); }
+};
+
+// ---- Trung tâm thông báo ----
+const postBox = async (id) => {
+  if (!id) return say('Bài viết không còn tồn tại.');
+  const r = await sb.from('posts').select('*').eq('id', id).maybeSingle();
+  if (r.error) return fail(r.error);
+  if (!r.data) return say('Bài viết không còn hoặc bạn không có quyền xem.');
+  await nm([r.data.author_id]);
+  const close = modal(), li = renderPost({ ...r.data, author: { username: names.get(r.data.author_id) } });
+  li.classList.add('post-solo'); close.sheet.append(li);
+  const b = li.querySelector('.act-link'); if (b) b.click(); // mở sẵn bình luận
+};
+const gotoConv = async (c, mid) => {
+  if (!c) return say('Thông báo này không còn liên kết tới cuộc trò chuyện.');
+  go('chat', true); await convList();
+  const b = clist.querySelector(`.conv[data-id="${c}"]`);
+  if (!b) return say('Cuộc trò chuyện không còn hoặc bạn đã không còn trong nhóm.');
+  if (cid !== c) b.click();
+  if (mid) setTimeout(() => jumpTo(mid), cid === c ? 100 : 1200);
+};
+const readConvSoon = deb(() => { if (cid) NXHN.readConv(cid); });
+const NI = { message: 'chat', reply: 'reply', mention: 'at', invite: 'users', follow: 'user', comment: 'chat', achievement: 'medal' };
+const notifRow = (r, cv) => {
+  const n = (r.meta && +r.meta.n) || 1, who = r.actor_id ? N(r.actor_id) : 'Một người ẩn danh', tt = cv && cv.is_group && cv.title ? cv.title : '', at = tt ? ' trong ' + tt : '';
+  const txt = ({
+    follow: `${who} đã theo dõi bạn`, comment: `${who} đã bình luận bài viết của bạn`, reply: `${who} đã trả lời tin nhắn của bạn${at}`,
+    mention: `${who} đã nhắc đến bạn${at}`, invite: `${who} đã thêm bạn vào nhóm${tt ? ' ' + tt : ''}`,
+    message: n > 1 ? `${n} tin nhắn mới${at}${r.actor_id ? ', gần nhất từ ' + who : ''}` : `${who} đã gửi tin nhắn mới${at}`,
+    achievement: `Bạn vừa đạt danh hiệu ${(r.meta && r.meta.icon) || '🏅'} ${(r.meta && r.meta.name) || 'mới'}`,
+  })[r.type] || 'Bạn có thông báo mới';
+  const read = () => {
+    if (r.read_at) return; r.read_at = new Date().toISOString(); li.classList.remove('unread');
+    const x = li.querySelector('.nf-read'); if (x) x.remove();
+    NXHN.markRead(r.id).then(() => badgeSoon());
+  };
+  const open = () => {
+    read();
+    if (r.type === 'follow') return r.actor_id && openProfile(r.actor_id);
+    if (r.type === 'comment') return postBox(r.post_id);
+    if (r.type === 'achievement') return achBox(user.id);
+    return gotoConv(r.conversation_id, r.message_id);
+  };
+  const li = h('li', { className: 'post notif' + (r.read_at ? '' : ' unread'), tabIndex: 0, role: 'link', onclick: open, onkeydown: (e) => { if (e.key === 'Enter') open(); } },
+    r.actor_id && r.type !== 'achievement' ? avt(r.actor_id) : h('span', { className: 'notif-ico' }, ico(NI[r.type] || 'bell')),
+    h('div', { className: 'notif-main' }, h('p', { className: 'notif-t', textContent: txt }), h('time', { className: 'post-time', textContent: when(r.created_at) })),
+    r.read_at ? null : h('button', { className: 'plain link-btn nf-read', type: 'button', textContent: 'Đã đọc', onclick: (e) => { e.stopPropagation(); read(); } }));
+  return li;
+};
+let nfilter = 'all';
+const nv = addView('notifs', 'Thông báo', () => { nf.load(true); badge(); });
+const nf = feed((c) => NXHN.loadNotifications(c, nfilter), async (ul, rows) => {
+  await nm(rows.map((r) => r.actor_id));
+  const cids = [...new Set(rows.map((r) => r.conversation_id).filter(Boolean))], cs = new Map();
+  if (cids.length) { const r = await sb.from('conversations').select('id,title,is_group').in('id', cids); (r.data || []).forEach((x) => cs.set(x.id, x)); }
+  rows.forEach((r) => ul.append(notifRow(r, cs.get(r.conversation_id))));
 }, (c, rows) => rows[rows.length - 1].created_at, 'Chưa có thông báo.');
-nv.append(h('h2', { textContent: 'Thông báo' }), btn('Đánh dấu tất cả đã đọc', async (b) => { if (await busy(b, () => NXHN.markAllRead())) { nf.load(true); badge(); } }), nf.el);
+const NFT = [['all', 'Tất cả'], ['unread', 'Chưa đọc'], ['chat', 'Tin nhắn'], ['act', 'Hoạt động']];
+const nfBtns = NFT.map(([k, t]) => h('button', { type: 'button', role: 'tab', textContent: t, onclick: () => { nfilter = k; paintNf(); nf.load(true); } }));
+const paintNf = () => nfBtns.forEach((b, i) => b.setAttribute('aria-selected', String(NFT[i][0] === nfilter)));
+paintNf();
+nv.append(h('div', { className: 'nf-head' }, h('h2', { textContent: 'Thông báo' }), btn('Đánh dấu tất cả đã đọc', async (b) => { if (await busy(b, () => NXHN.markAllRead())) { nf.load(true); badge(); } })),
+  h('div', { className: 'seg', role: 'tablist' }, nfBtns), nf.el);
+const nfList = deb(() => { if (!nv.hidden) nf.load(true); });
+const nfEvent = (e) => { // realtime: chỉ làm mới danh sách khi có thông báo mới / gộp thêm (không làm mới khi chỉ đổi trạng thái đã đọc)
+  const n = e.new || {};
+  badgeSoon();
+  if (e.eventType === 'INSERT' || (e.eventType === 'UPDATE' && !n.read_at)) nfList();
+  if (e.eventType === 'INSERT' && n.type === 'achievement') say('Bạn vừa đạt một danh hiệu mới! Mở Thông báo để xem.');
+};
 
 // ---- Quản trị (nút chỉ hiện với admin; quyền thật ở hàm SQL / RLS) ----
 const adminPanel = () => {
@@ -1153,6 +1397,7 @@ const adminPanel = () => {
       const li = h('li', { className: 'post' }, h('span', { className: 'who' }, av0(u.username, '', u.id), h('b', { textContent: handle(u.username) + (u.display_name && u.display_name !== u.username ? ' · ' + u.display_name : '') })),
         h('p', { className: 'post-body', textContent: `${u.role === 'admin' ? 'Quản trị · ' : ''}${u.banned ? 'ĐÃ KHÓA' : 'Hoạt động'} · Lượt ẩn danh: ${u.balance}/5` }));
       if (u.role !== 'admin') li.append(h('div', { className: 'actions' },
+        btn('Cấp danh hiệu Tiên Phong', async (b) => { if (await busy(b, () => rpc('admin_grant_achievement', { p_user: u.id, p_code: 'founding_member' }))) say('Đã cấp danh hiệu.'); }),
         btn('Tặng 1 lượt', async (b) => { if (await busy(b, () => NXHN.admGrant(u.id))) { say('Đã tặng 1 lượt.'); users(); } }),
         btn(u.banned ? 'Mở khóa' : 'Khóa', async (b) => { if (await confirmBox((u.banned ? 'Mở khóa ' : 'Khóa ') + handle(u.username) + '?', u.banned ? 'Mở khóa' : 'Khóa', !u.banned) && await busy(b, () => NXHN.admBan(u.id, !u.banned))) users(); }),
         btn('Xóa', async (b) => { if (await confirmBox('Xóa vĩnh viễn ' + handle(u.username) + '? Không thể hoàn tác.', 'Xóa vĩnh viễn', true, 'Xóa tài khoản') && await busy(b, () => NXHN.admDel(u.id))) users(); }, 'btn-danger')));
@@ -1168,7 +1413,7 @@ const af = feed((c) => NXHN.openReports(c || 0), async (ul, rows) => {
   for (const r of rows) {
     const t = { post: 'posts', comment: 'comments', message: 'messages' }[r.target_type];
     const res = t ? await sb.from(t).select('body').eq('id', r.target_id).maybeSingle() : await sb.from('profiles').select('username').eq('id', r.target_id).maybeSingle();
-    const c = res.data, shown = c ? (c.body === IMG_MARK ? '(ảnh)' : c.body === STK_MARK ? '(nhãn dán)' : c.body || handle(c.username)) : '(không còn)';
+    const c = res.data, shown = c ? (c.body === IMG_MARK ? '(ảnh)' : c.body === STK_MARK ? '(nhãn dán)' : c.body === POLL_MARK ? '(bình chọn)' : c.body || handle(c.username)) : '(không còn)';
     const li = h('li', { className: 'post' }, h('b', { textContent: `Báo cáo: ${r.target_type}` }),
       h('p', { className: 'post-body', textContent: 'Lý do: ' + r.reason }), h('p', { className: 'post-body', textContent: 'Nội dung: ' + shown }));
     const act = (a) => async (b) => {
@@ -1209,11 +1454,12 @@ const live = () => {
           setTimeout(() => { const med = mlist.querySelector(`[data-id="${m.id}"] .media:empty`); if (med) queueImg(med, 'message_id', m.id); }, 4000);
         }
       }
+      if (m.conversation_id === cid && m.sender_id !== user.id) readConvSoon();
       refreshList();
     })
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (e) => { if (e.new && e.new.deleted_at) markGone(e.new.id); refreshList(); })
     .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, (e) => { if (e.old && e.old.id) markGone(e.old.id); refreshList(); })
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, () => badge())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, nfEvent)
     .subscribe();
   // kênh riêng: nếu bảng chưa nằm trong publication thì chỉ kênh đó lỗi, chat vẫn chạy
   ch2 = sb.channel('nxhn-att')
@@ -1229,13 +1475,17 @@ const live = () => {
     })
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversations' }, () => { refreshList(); refreshPerm(); })
     .subscribe();
+  // bình chọn: kênh riêng (bảng polls chưa có thì chỉ kênh này lỗi, chat vẫn chạy); chỉ một lần đăng ký mỗi phiên đăng nhập
+  ch4 = sb.channel('nxhn-poll')
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'polls' }, (e) => { const mid = e.new && e.new.message_id; if (mid && mlist.querySelector(`.poll[data-m="${mid}"]`)) pollLoad(mid); })
+    .subscribe();
 };
 const reset = () => {
   saved.clear(); mine.clear(); pinIds.clear(); preloaded = false; perm = { can_send: true };
   names.clear(); avPath.clear(); avUrl.clear(); avDone.clear(); stickers.clear(); cstate.clear(); fol.clear(); frd.clear(); convInfo.clear();
-  cid = null; peer = null; curOwner = null; clearInterval(timer);
-  [ch, ch2, ch3].forEach((c) => { if (c) sb.removeChannel(c); }); ch = ch2 = ch3 = null;
-  [clist, mlist, plist, infoEl].forEach((x) => x.replaceChildren()); [nf, af, apf].forEach((f) => f.clear());
+  cid = null; peer = null; curOwner = null; clearInterval(timer); clearInterval(actT); pq.clear();
+  [ch, ch2, ch3, ch4].forEach((c) => { if (c) sb.removeChannel(c); }); ch = ch2 = ch3 = ch4 = null;
+  [clist, mlist, plist, infoEl].forEach((x) => x.replaceChildren()); [nf, af, apf].forEach((f) => f.clear()); nfilter = 'all'; paintNf();
   sq.value = ''; mtext.value = ''; fit(); clearFiles(); anonOn = false; left = 0; paintAnon(); setReply(null);
   chatBox.removeAttribute('data-open'); chatBox.removeAttribute('data-info'); applyBg(null);
   bellBadge.hidden = true; hdr.hidden = true; accBtn.replaceChildren(); tabBtn.admin.hidden = true; isAdm = false; ptab = 'search'; pnone.hidden = true;
@@ -1248,7 +1498,7 @@ sb.auth.onAuthStateChange((_e, s) => setTimeout(async () => {
   me = id; reset();
   if (!id) return;
   hdr.hidden = false; nm([id]).then(() => accBtn.replaceChildren(avt(id)));
-  loadRel(); live(); badge(); timer = setInterval(badge, 60000);
+  loadRel(); live(); badge(); timer = setInterval(badge, 60000); actT = setInterval(pingAct, 60000); setTimeout(pingAct, 5000);
   if (await NXHN.isAdmin()) { isAdm = true; tabBtn.admin.hidden = false; }
 }, 0));
 })();
