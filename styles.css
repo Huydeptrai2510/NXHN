@@ -740,14 +740,37 @@ html {
   text-size-adjust: 100%;
 }
 
-/* ===== NXHN: ĐIỀU CHỈNH VỊ TRÍ TOÀN BỘ TRANG ===== */
+```css
+/* ===== NXHN WEB APP — GLOBAL PAGE OFFSET ===== */
+
 :root {
-    /* TĂNG số này để đẩy toàn bộ trang xuống */
-    --page-offset-top: 100px;
+    /* TĂNG/GIẢM THÔNG SỐ NÀY ĐỂ ĐIỀU CHỈNH */
+    --page-offset-top: 50px;
 }
+
+/* Cho phép trang cuộn theo chiều dọc */
+html {
+    overflow-y: auto;
+}
+
+body {
+    margin: 0;
+    padding-top: 0 !important;
+    overflow-x: hidden;
+}
+
+/* Đẩy toàn bộ khung ứng dụng xuống */
+.app-shell {
+    position: relative;
+    top: var(--page-offset-top);
+    box-sizing: border-box;
+}
+
+/* Tránh nội dung tràn ngang trên điện thoại */
 @media screen and (max-width: 768px) {
-    body {
-        box-sizing: border-box;
-        padding-top: var(--page-offset-top) !important;
+    .app-shell {
+        width: 100%;
+        max-width: 100%;
     }
 }
+```
